@@ -1,25 +1,16 @@
 #!/usr/bin/env bash
-# End-to-end CPU/GPU smoke test with tiny random models and a few hundred HH-RLHF pairs.
-# Checks the plumbing only; numbers are meaningless. Extra Hydra overrides are appended, e.g.
+# Small end-to-end test of every runner script with tiny random GPT-2 models and 48 samples per
+# split. Checks the plumbing only (all datasets, stages, methods, losses, scripts); the GRA numbers
+# are meaningless. Everything goes to .smoke/ so real data and checkpoints are untouched.
+#
+#   bash scripts/smoke_test.sh                          # W&B and Hub off
 #   bash scripts/smoke_test.sh logger=wandb hub.push=true
+#
+# Covers: run_pipeline.sh (all 4 methods, DPO), table1.sh (TL;DR + UFB loaders, rDPO),
+# table2.sh (student-size loop), table3.sh (SimPO), ablation.sh (C_MS variants, IPO),
+# and collect_results.
 source "$(dirname "$0")/common.sh"
 export MSPO_ROOT="${ROOT_DIR}/.smoke"
-NUM_GPUS=${NUM_GPUS:-0}
-
-SMALL=(
-  dataset=hh_helpful model=tiny logger=none precision=fp32 model_dtype=fp32 infer_batch_size=8
-  eval.num_samples=8 eval.max_new_tokens=16 eval.reward_batch_size=4
-  dataset.reward_model=deberta eval.reward_models.deberta=${MSPO_ROOT}/tiny_models/reward
-  train.weak_sft.num_train_epochs=1 train.weak_po.num_train_epochs=1
-  train.strong_sft.num_train_epochs=1 train.strong_po.num_train_epochs=1
-  train.strong_sft.optim=adamw_torch train.strong_po.optim=adamw_torch
-  train.weak_sft.per_device_train_batch_size=8 train.weak_po.per_device_train_batch_size=8
-  train.strong_sft.per_device_train_batch_size=4 train.strong_po.per_device_train_batch_size=4
-  train.strong_sft.gradient_accumulation_steps=1 train.strong_po.gradient_accumulation_steps=1
-  train.strong_sft.warmup_steps=0 train.strong_po.warmup_steps=0
-  "$@"
-)
-SMOKE_N=${SMOKE_N:-200}
 
 # Tiny random GPT-2 weak/strong policies + reward model sharing the GPT-2 tokenizer.
 python - <<'PY'
@@ -32,31 +23,40 @@ for name, n_embd, cls in (("weak", 32, GPT2LMHeadModel), ("strong", 64, GPT2LMHe
     out = os.path.join(root, name)
     if os.path.exists(out):
         continue
-    cfg = GPT2Config(n_layer=2, n_head=2, n_embd=n_embd, n_positions=1024, num_labels=1,
+    # 2048 positions: TL;DR prompts can exceed 1024 tokens before generation.
+    cfg = GPT2Config(n_layer=2, n_head=2, n_embd=n_embd, n_positions=2048, num_labels=1,
                      pad_token_id=tok.eos_token_id)
     cls(cfg).save_pretrained(out)
     tok.save_pretrained(out)
 PY
 
-python main.py stage=prepare_data "${SMALL[@]}"
-# Shrink splits for speed.
-for f in labeled unlabeled validation test; do
-  p="${MSPO_ROOT}/data/processed/hh_helpful/${f}.jsonl"
-  head -n "${SMOKE_N}" "$p" > "$p.tmp" && mv "$p.tmp" "$p"
-done
+TINY="${MSPO_ROOT}/tiny_models"
+SMALL=(
+  model.weak.name="${TINY}/weak" model.strong.name="${TINY}/strong" "model.lora_target_modules=[c_attn]"
+  logger=none debug_max_samples=48 infer_batch_size=8
+  eval.num_samples=8 eval.max_new_tokens=16 eval.generation_batch_size=8 eval.reward_batch_size=8
+  dataset.reward_model=deberta eval.reward_models.deberta="${TINY}/reward"
+  train.weak_sft.num_train_epochs=1 train.weak_po.num_train_epochs=1
+  train.strong_sft.num_train_epochs=1 train.strong_po.num_train_epochs=1
+  "$@"
+)
 
-launch train_weak "${SMALL[@]}"
-launch annotate "${SMALL[@]}"
-launch train_strong_sft "${SMALL[@]}" method=human
-launch train_strong_sft "${SMALL[@]}" method=ms_po
-launch compute_ms_weights "${SMALL[@]}"
-for method in human ws_po cw_po ms_po; do
-  launch train_strong_po "${SMALL[@]}" method=${method} loss=dpo
-  launch evaluate "${SMALL[@]}" method=${method} loss=dpo
-done
-for loss in ipo rdpo simpo; do
-  launch train_strong_po "${SMALL[@]}" method=ms_po loss=${loss}
-done
-launch train_strong_po "${SMALL[@]}" method=ms_po loss=dpo ms.variant=weak
+echo "=== 1/5 run_pipeline.sh: HH-Helpful, all methods, DPO"
+DATASET=hh_helpful MODEL=opt LOSSES=dpo bash scripts/run_pipeline.sh "${SMALL[@]}"
+
+echo "=== 2/5 table1.sh: TL;DR + UFB loaders, rDPO"
+MODELS=opt DATASETS="tldr ufb" LOSSES=rdpo METHODS="human ms_po" bash scripts/table1.sh "${SMALL[@]}"
+
+echo "=== 3/5 table2.sh: student-size loop (sizes collapse to the tiny student)"
+MODELS=opt DATASETS=hh_helpful METHODS="cw_po" bash scripts/table2.sh "${SMALL[@]}"
+
+echo "=== 4/5 table3.sh: SimPO"
+MODELS=opt DATASETS=hh_helpful METHODS="ms_po" bash scripts/table3.sh "${SMALL[@]}"
+
+echo "=== 5/5 ablation.sh: C_MS variants with IPO"
+DATASET=hh_helpful MODEL=opt LOSS=ipo VARIANTS="direct weak marginal bounded" GAMMAS="1.0 0.5" \
+  bash scripts/ablation.sh "${SMALL[@]}"
+
 python main.py stage=collect_results "${SMALL[@]}"
-echo "Smoke test passed."
+n=$(ls "${MSPO_ROOT}"/outputs/*/*/results/*.json | wc -l)
+echo "Smoke test passed: ${n} evaluated runs."

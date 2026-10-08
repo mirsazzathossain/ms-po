@@ -16,7 +16,7 @@ defaults:
   - hub: default
   - _self_
 
-stage: ???   # prepare_data | train_weak | annotate | train_strong_sft | compute_ms_weights | train_strong_po | evaluate | collect_results
+stage: ???   # preflight | prepare_data | train_weak | annotate | train_strong_sft | compute_ms_weights | train_strong_po | evaluate | collect_results
 seed: 42
 # Mixed precision. resources/ms_po_ours/utils/mange_config.py: fp16=torch.cuda.is_available().
 precision: fp16
@@ -27,6 +27,8 @@ model_dtype: fp32
 infer_batch_size: 4
 # Overwrite existing stage outputs instead of skipping finished stages.
 overwrite: false
+# Smoke tests only: truncate every prepared split to this many samples (null = full data).
+debug_max_samples: null
 
 # Multi-granular student-aware weighting (Sec. 4; resources/ms_po_ours/utils/Compute_MS_PO.py).
 ms:

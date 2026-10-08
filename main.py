@@ -4,6 +4,7 @@
     torchrun --nproc_per_node=<N> main.py stage=<stage> [hydra overrides]     # multi-GPU (DDP)
 
 Stages (see pipeline/__init__.py):
+    preflight           check GPUs, disk, W&B / HF credentials, model + dataset access, vocabularies
     prepare_data        download, length-filter and 30/70 split a dataset
     train_weak          weak teacher SFT + DPO on D_labeled
     annotate            weak pseudo-labels + teacher confidence C_weak on D_unlabeled

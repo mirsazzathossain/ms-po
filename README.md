@@ -23,7 +23,7 @@ ms-po/
 ├── configs/                # Hydra configs
 │   ├── config.yaml         #   root: seed, precision, MS-PO (gamma / variant)
 │   ├── dataset/            #   hh_rlhf, hh_helpful, hh_harmless, tldr, ufb
-│   ├── model/              #   opt, qwen2_5, qwen3 (weak/strong pairs), tiny (smoke test)
+│   ├── model/              #   opt, qwen2_5, qwen3 (weak/strong pairs)
 │   ├── method/             #   human, ws_po, cw_po, ms_po
 │   ├── loss/               #   dpo, ipo, rdpo, simpo
 │   ├── train/              #   weak_sft, weak_po, strong_sft, strong_po (Tables 4-6)
@@ -33,7 +33,7 @@ ms-po/
 ├── pipeline/               # one module per stage, each exposing run(cfg)
 ├── utils/                  # confidence scores (losses.py), TRL trainers (trainer.py), evaluation,
 │                           #   W&B (logging.py), HF Hub (hub.py), distributed helpers, io
-├── scripts/                # shell runners (pipeline, Tables 1-3, ablations, smoke test)
+├── scripts/                # run_all.sh, run_pipeline.sh, table1-3.sh, ablation.sh, smoke_test.sh, common.sh
 ├── data/                   # datasets (generated; see data/README.md)
 ├── checkpoints/            # trained weights (generated)
 ├── outputs/                # generations, GRA results, Hydra logs (generated)
@@ -67,6 +67,7 @@ details come from the reference code.
 
 | # | Stage (`python main.py stage=...`) | Output |
 |---|---|---|
+| – | `preflight`: GPUs, disk, W&B / HF login, access to every model, dataset and gold RM (gated Skywork included), weak/strong vocabulary match | pass/fail report |
 | 0 | `prepare_data`: parse, length filter, split 30/70, 1% of the 70% held out for validation | `data/processed/<ds>/` |
 | 1 | `train_weak`: full fine-tune of the weak model, SFT then DPO on D_labeled | `checkpoints/<ds>/weak/<weak>/{sft,dpo}` |
 | 2 | `annotate`: weak labels + C_weak on D_unlabeled | `data/annotated/<ds>/<weak>/unlabeled.jsonl` |
@@ -101,11 +102,12 @@ bash scripts/smoke_test.sh logger=wandb hub.push=true       # same, also exercis
 DATASET=hh_rlhf MODEL=opt LOSSES=dpo bash scripts/run_pipeline.sh
 ```
 
-The smoke test builds tiny random GPT-2 models and uses about 50 HH-RLHF pairs, so its GRA
-numbers are meaningless (usually 0.0, since the samples tie). It only checks that every stage runs.
-
-`scripts/common.sh` loads `.env`, so W&B and the Hub pick up `WANDB_API_KEY` and `HF_TOKEN`.
-You also need to accept the license of the gated Skywork-Reward-V2-Llama-3.1-8B gold reward model.
+The smoke test builds tiny random GPT-2 models, truncates every split to 48 samples
+(`debug_max_samples=48`) and drives every runner script with them: `run_pipeline.sh` (all 4
+methods, DPO), `table1.sh` (TL;DR and UFB loaders, rDPO), `table2.sh`, `table3.sh` (SimPO) and
+`ablation.sh` (C_MS variants, IPO). Outputs go to `.smoke/`. It checks that everything runs; the
+GRA numbers are meaningless (usually 0.0, since the samples tie). It takes about 15-20 minutes on
+an A100, mostly dataset preparation and process start-up.
 
 **Google Colab:** Colab ships newer transformers / huggingface_hub than this repo pins, and
 installing the pins globally would break Colab's own packages. Use a venv that reuses Colab's
@@ -127,6 +129,21 @@ so a disconnect does not lose finished stages. Finished stages are skipped, so r
 command resumes.
 
 ## Running experiments
+
+**Full reproduction** (all tables, in dependency order, resumable):
+
+```bash
+cp .env.example .env               # WANDB_API_KEY, WANDB_ENTITY, HF_TOKEN, HF_USERNAME
+python main.py stage=preflight     # ~2 min; fix any FAIL before spending GPU hours
+NUM_GPUS=8 bash scripts/run_all.sh hub.push=true
+```
+
+`run_all.sh` runs preflight, then Table 1, Table 2 and Table 3 (Tables 2-3 reuse Table 1's weak
+teachers, annotations and SFT students), then `collect_results`. `RUN_ABLATION=1` adds the
+Appendix-B variants. Re-run the same command after an interruption; finished stages are skipped.
+Rough cost: ~5,000 A100-hours for everything (Table 1 is ~3,300).
+
+**Pieces:**
 
 ```bash
 # One dataset / model pair: all 4 methods × losses
@@ -202,6 +219,7 @@ These values had to be filled in. Each one is a config key, so you can change it
 | SimPO β, γ | TRL CPOConfig defaults: 0.1, 0.5 | `loss.beta`, `loss.simpo_gamma` (`loss=simpo`) |
 | Weak-teacher scheduler, warmup, weight decay | HF defaults (linear, 0, 0) | `train.weak_*` |
 | UFB preprocessing | same as HH-RLHF | `dataset/ufb.py` |
+| TL;DR GRA prompts (its test split has ~86k comparisons) | fixed-seed random 2,000 | `dataset.eval_num_samples` (`dataset=tldr`) |
 | Qwen3 checkpoints | `Qwen/Qwen3-0.6B`, `Qwen/Qwen3-8B`, the names in the paper | `model.*.name` |
 
 Values taken from the reference code because the paper does not give them: β_w = 0.1

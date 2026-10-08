@@ -10,4 +10,7 @@ max_length: 1024
 length_tokenizer: openai-community/gpt2
 unlabeled_fraction: 0.7
 validation_fraction: 0.01
-reward_model: deberta        # OpenAssistant/reward-model-deberta-v3-large-v2 (footnote 2)
+reward_model: deberta
+# NOT GIVEN in the paper: the TL;DR test split (summarize_from_feedback validation) has ~86k
+# comparisons; GRA uses a fixed-seed random subset of this many prompts. eval.num_samples overrides it.
+eval_num_samples: 2000        # OpenAssistant/reward-model-deberta-v3-large-v2 (footnote 2)

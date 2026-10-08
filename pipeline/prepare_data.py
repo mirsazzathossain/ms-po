@@ -26,6 +26,8 @@ def run(cfg: DictConfig) -> None:
     if not dist.is_main() or is_done(os.path.join(out, "stats.json"), cfg):
         return
     splits = build_splits(cfg.dataset, seed=cfg.seed, num_proc=4)
+    if cfg.debug_max_samples:  # smoke tests only: keep the first N samples of every split
+        splits = {k: ds.select(range(min(cfg.debug_max_samples, len(ds)))) for k, ds in splits.items()}
     stats = {}
     for name, ds in splits.items():
         stats[name] = write_jsonl(os.path.join(out, f"{name}.jsonl"), ds)

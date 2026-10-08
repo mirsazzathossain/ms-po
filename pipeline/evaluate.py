@@ -14,6 +14,7 @@ from __future__ import annotations
 import gc
 import logging
 import os
+import random
 
 import torch
 from omegaconf import DictConfig
@@ -83,8 +84,11 @@ def run(cfg: DictConfig) -> None:
     require(os.path.join(po_dir, "_SUCCESS"), "main.py stage=train_strong_po")
 
     test = read_jsonl(processed_file(cfg, "test"))
-    if cfg.eval.num_samples:
-        test = test[: cfg.eval.num_samples]
+    n_eval = cfg.eval.num_samples or cfg.dataset.get("eval_num_samples")
+    if n_eval and n_eval < len(test):
+        # fixed-seed random subset, identical for every model / method of a dataset
+        keep = sorted(random.Random(cfg.seed).sample(range(len(test)), n_eval))
+        test = [test[i] for i in keep]
     prompts = [r["prompt"] for r in test]
     gen_dir = os.path.join(cfg.paths.eval_dir, "generations")
     n = len(prompts)

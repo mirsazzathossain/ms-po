@@ -1,5 +1,5 @@
 # Gold Reward Accuracy (Eq. 13): fraction of test prompts where R(x, y_aligned) > R(x, y_SFT).
-num_samples: null          # null -> full filtered test split
+num_samples: null          # null -> full filtered test split (or dataset.eval_num_samples)
 # Generation (Appendix C.3, following CW-PO): temperature 0.95, at most 512 new tokens.
 temperature: 0.95
 max_new_tokens: 512
