@@ -1,4 +1,4 @@
-# Qwen2.5-0.5B -> Qwen2.5-7B (Table 1). Table 2 sweeps 1.5B / 3B / 7B.
+# Qwen2.5-0.5B -> Qwen2.5-7B
 family: qwen2_5
 weak:
   name: Qwen/Qwen2.5-0.5B

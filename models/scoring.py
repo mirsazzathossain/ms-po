@@ -1,9 +1,4 @@
-"""Batched no-grad scoring of (prompt, response) pairs, following Compute_MS_PO.compute_ms_po_scores:
-
-    full_enc   = tokenizer(prompt + response, max_length=max_length, truncation=True)
-    prompt_len = len(tokenizer(prompt, max_length=max_length, truncation=True))
-and response tokens are positions >= prompt_len.
-"""
+"""Batched teacher/student scoring with the tokenization of Compute_MS_PO.py."""
 
 from __future__ import annotations
 
@@ -32,11 +27,7 @@ def _pad(seqs, pad_id):
 
 @torch.no_grad()
 def score_pairs(weak_model, other_model, tokenizer, prompts, responses, batch_size, max_length, device, other_is_student):
-    """For every (prompt, response):
-        weak sequence log-prob and response length (always),
-        S(x, y) = KL(pi_w || other)          if other_is_student,
-        other model's sequence log-prob      otherwise (e.g. the weak reference model, Eq. 2).
-    Returns (s_or_other_logprob, weak_logprob, token_count) as lists aligned with the inputs."""
+    """Returns (S(x,y) if other_is_student else other's log-prob, weak log-prob, token count)."""
     full, plens = _encode(tokenizer, prompts, responses, max_length)
     n = len(full)
     out_other, out_weak, out_len = [0.0] * n, [0.0] * n, [0] * n

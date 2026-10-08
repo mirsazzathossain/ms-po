@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Table 2: student-size sweep with DPO. OPT-125M -> {1.3B, 2.7B, 6.7B}; Qwen2.5-0.5B -> {1.5B, 3B, 7B}.
+# Table 2: student sizes with DPO. Options: MODELS, DATASETS, METHODS
 set -euo pipefail
 HERE="$(dirname "$0")"
 declare -A STRONG=(

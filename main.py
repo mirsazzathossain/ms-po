@@ -1,22 +1,10 @@
-"""Single entry point for every MS-PO pipeline stage.
+"""Entry point for all stages.
 
-    python main.py stage=<stage> [hydra overrides]
-    torchrun --nproc_per_node=<N> main.py stage=<stage> [hydra overrides]     # multi-GPU (DDP)
+    python main.py stage=<stage> [overrides]
+    torchrun --nproc_per_node=N main.py stage=<stage> [overrides]
 
-Stages (see pipeline/__init__.py):
-    preflight           check GPUs, disk, W&B / HF credentials, model + dataset access, vocabularies
-    prepare_data        download, length-filter and 30/70 split a dataset
-    train_weak          weak teacher SFT + DPO on D_labeled
-    annotate            weak pseudo-labels + teacher confidence C_weak on D_unlabeled
-    train_strong_sft    strong student SFT (LoRA), human or weak labels
-    compute_ms_weights  teacher-student token KL S(x, y+), S(x, y-) for MS-PO
-    train_strong_po     strong preference optimisation (human / ws_po / cw_po / ms_po x dpo / ipo / rdpo / simpo)
-    evaluate            Gold Reward Accuracy vs. the SFT model
-    collect_results     aggregate GRA results into a table
-
-Example:
-    python main.py stage=train_strong_po dataset=hh_rlhf model=opt method=ms_po loss=dpo
-"""
+Stages: preflight, prepare_data, train_weak, annotate, train_strong_sft, compute_ms_weights,
+train_strong_po, evaluate, collect_results."""
 
 from __future__ import annotations
 

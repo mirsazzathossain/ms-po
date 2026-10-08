@@ -1,10 +1,4 @@
-"""Stage 3: SFT of the strong student on D_unlabeled (prompt, chosen) with LoRA (Table 6).
-
-Chosen responses come from the method's label source (Sec. 5.1): human labels (method=human) or
-the weak teacher's pseudo-labels (method=ws_po / cw_po / ms_po share one SFT model).
-
-    torchrun --nproc_per_node=N main.py stage=train_strong_sft dataset=hh_rlhf model=opt method=ms_po
-"""
+"""LoRA SFT of the strong student on human or weak labels.  main.py stage=train_strong_sft method=<m>"""
 
 from __future__ import annotations
 

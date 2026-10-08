@@ -1,14 +1,12 @@
-# Anthropic HH-RLHF, Helpful subset (Bai et al., 2022).
+# Anthropic HH-RLHF, Helpful
 name: hh_helpful
 loader: hh_rlhf
 hf_path: Anthropic/hh-rlhf
 subsets: [helpful-base]
 train_split: train
 test_split: test
-# Drop samples with len(p + "\n\nAssistant: " + c + "\n\nAssistant: " + r) > max_length GPT-2 tokens
-# (Sec. 5.1; resources data_processing_hh_rlhf.py). Also the TRL max_length during training.
-max_length: 512
+max_length: 512              # length filter (GPT-2 tokens) and training max_length
 length_tokenizer: openai-community/gpt2
-unlabeled_fraction: 0.7      # 30% D_labeled / 70% D_unlabeled (Sec. 5.1)
-validation_fraction: 0.01    # held out of the 70% for eval_loss during training (resources)
-reward_model: skywork        # gold RM for GRA (Sec. 5.2)
+unlabeled_fraction: 0.7      # 30% labeled / 70% unlabeled
+validation_fraction: 0.01    # of the 70%, for eval_loss
+reward_model: skywork        # skywork | deberta

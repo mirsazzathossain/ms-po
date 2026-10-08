@@ -1,12 +1,4 @@
-"""Pre-run checks, so a long cluster job does not fail hours in.
-
-    python main.py stage=preflight
-
-Checks: GPUs, free disk, W&B login, HF token, access to every dataset / weak / strong / gold-RM
-repo used in the paper (gated Skywork included), and that each weak/strong pair shares a
-tokenizer vocabulary (needed for the token-level KL, Eq. 9). Downloads only configs/tokenizers.
-Exits non-zero if any check fails.
-"""
+"""Pre-run checks: GPUs, disk, W&B / HF login, model and dataset access, vocabularies.  main.py stage=preflight"""
 
 from __future__ import annotations
 
@@ -21,7 +13,6 @@ from utils.config import CONFIG_PATH
 
 FAMILIES = ("opt", "qwen2_5", "qwen3")
 DATASETS = ("hh_rlhf", "tldr", "ufb")
-# Students of Table 2 besides the Table 1 defaults (scripts/table2.sh).
 TABLE2_STUDENTS = {
     "opt": ("facebook/opt-1.3b", "facebook/opt-2.7b"),
     "qwen2_5": ("Qwen/Qwen2.5-1.5B", "Qwen/Qwen2.5-3B"),
@@ -43,7 +34,6 @@ def run(cfg: DictConfig) -> None:
         except Exception as e:  # noqa: BLE001 - report every failure, keep checking
             results.append((name, False, f"{type(e).__name__}: {e}"[:200]))
 
-    # --- hardware / disk
     def cuda_check():
         if not torch.cuda.is_available():
             raise RuntimeError("no CUDA device")
@@ -53,7 +43,6 @@ def run(cfg: DictConfig) -> None:
     check("cuda", cuda_check)
     check("disk", lambda: f"{shutil.disk_usage(cfg.paths.root_dir).free / 2**30:.0f} GB free at {cfg.paths.root_dir}")
 
-    # --- logging / hub credentials
     def wandb_check():
         if not cfg.logger.enabled:
             return "logger disabled"
@@ -75,7 +64,6 @@ def run(cfg: DictConfig) -> None:
 
         check("hub.user", hub_user_check)
 
-    # --- repo access (configs only; gated repos raise here)
     repos = {s for students in TABLE2_STUDENTS.values() for s in students}
     for fam in FAMILIES:
         m = _load("model", fam)
@@ -87,7 +75,6 @@ def run(cfg: DictConfig) -> None:
         d = _load("dataset", ds)
         check(f"dataset {d.hf_path}", lambda p=d.hf_path: auth_check(p, repo_type="dataset") or "accessible")
 
-    # --- weak/strong tokenizers must match (Eq. 9)
     from transformers import AutoTokenizer
 
     for fam in FAMILIES:

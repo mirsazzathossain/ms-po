@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-# Full pipeline for one (dataset, model pair): all methods x the given losses.
-# Finished stages are skipped automatically, so the script can be re-run after interruptions.
-#
-#   DATASET=hh_rlhf MODEL=opt LOSSES="dpo ipo rdpo" bash scripts/run_pipeline.sh [extra hydra overrides]
-#
-# Extra overrides (e.g. model.strong.name=facebook/opt-1.3b, logger=none, hub.push=true) apply to every stage.
+# All stages for one dataset / model pair. Re-run to resume.
+#   DATASET=hh_rlhf MODEL=opt bash scripts/run_pipeline.sh [hydra overrides]
+# Options: DATASET, MODEL, LOSSES (dpo ipo rdpo), METHODS (human ws_po cw_po ms_po)
 source "$(dirname "$0")/common.sh"
 
 DATASET=${DATASET:-hh_rlhf}
@@ -28,7 +25,7 @@ python main.py stage=prepare_data "${BASE[@]}"
 launch train_weak "${BASE[@]}"
 launch annotate "${BASE[@]}"
 
-# Two SFT students: human labels (Human baseline) and weak labels (shared by WS-PO / CW-PO / MS-PO).
+# SFT on human labels (Human) and on weak labels (WS-PO / CW-PO / MS-PO)
 if [[ " ${METHODS} " == *" human "* ]]; then
   launch train_strong_sft "${BASE[@]}" "${BIG[@]}" method=human
 fi

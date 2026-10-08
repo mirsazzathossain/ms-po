@@ -1,14 +1,4 @@
-"""Aggregate outputs/*/*/results/*.json into Table-1-style GRA tables.
-
-    python main.py stage=collect_results
-
-Writes outputs/results.md and outputs/results.csv and, with W&B enabled, logs a run
-`results-summary` (group `results`) containing:
-  * results/all                         : every evaluated run (one row per result JSON)
-  * results/<weak>-to-<strong>/<loss>   : dataset x method GRA table with an Avg. row (as in Table 1)
-  * results/gra/<dataset>/<pair>/<loss>/<method> : scalar summaries, for W&B charts and reports
-  * an artifact `results-summary` with the CSV and Markdown files.
-"""
+"""Table-1-style GRA summary (outputs/results.{md,csv} + W&B run `results-summary`).  main.py stage=collect_results"""
 
 from __future__ import annotations
 

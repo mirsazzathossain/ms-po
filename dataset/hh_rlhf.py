@@ -1,10 +1,4 @@
-"""Anthropic HH-RLHF preprocessing, ported from resources/ms_po_ours/utils/data_processing_hh_rlhf.py.
-
-prompt = conversation up to (not including) the last "\n\nAssistant:" (stripped),
-response = text after it (stripped). Samples whose
-`prompt + "\n\nAssistant: " + chosen + "\n\nAssistant: " + rejected` exceeds `max_length` tokens
-(GPT-2 tokenizer) are dropped.
-"""
+"""Anthropic HH-RLHF preprocessing (from resources/ms_po_ours/utils/data_processing_hh_rlhf.py)."""
 
 from __future__ import annotations
 
@@ -17,7 +11,6 @@ def split_hh_conversation(text):
     idx = text.rfind(marker)
 
     if idx == -1:
-        # Fallback logic to avoid raising uncaught exceptions
         return None, None
 
     prompt = text[:idx].strip()
@@ -29,7 +22,6 @@ def split_hh_conversation(text):
 def preprocess_hh_rlhf(dataset_split, tokenizer, is_train, max_length=512, num_proc=4):
     """Preprocess Anthropic HH-RLHF for DPO with batched processing."""
 
-    # 1. Parse and extract prompts/responses safely
     def convert_batch(batch):
         prompts, ch_responses, rej_responses, valid = [], [], [], []
 
@@ -37,7 +29,6 @@ def preprocess_hh_rlhf(dataset_split, tokenizer, is_train, max_length=512, num_p
             ch_p, ch_r = split_hh_conversation(ch_text)
             rej_p, rej_r = split_hh_conversation(rej_text)
 
-            # Validate extraction succeeded and prompts match
             if ch_p and rej_p and ch_p == rej_p and ch_r and rej_r:
                 prompts.append(ch_p)
                 ch_responses.append(ch_r)
@@ -85,8 +76,6 @@ def filter_max_length(processed, tokenizer, max_length, num_proc=4):
 
 
 def load(cfg, split, tokenizer, num_proc=4):
-    # resources: load_dataset("Anthropic/hh-rlhf", data_dir="helpful-base"); combined HH-RLHF
-    # (Sec. 5.1) concatenates the helpful-base and harmless-base subsets.
     parts = [load_dataset(cfg.hf_path, data_dir=subset, split=split) for subset in cfg.subsets]
     raw = concatenate_datasets(parts) if len(parts) > 1 else parts[0]
     return preprocess_hh_rlhf(raw, tokenizer, split, max_length=cfg.max_length, num_proc=num_proc)

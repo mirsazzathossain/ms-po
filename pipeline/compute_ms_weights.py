@@ -1,11 +1,4 @@
-"""Stage 4: MS-PO sequence discrepancies (resources/ms_po_ours/utils/Compute_MS_PO.py).
-
-For every weakly-labelled pair, S(x, y+) and S(x, y-) (Eq. 8-9) between the weak teacher pi_w
-(weak DPO model) and the strong student pi_s (strong SFT model on weak labels). C_align (Eq. 10)
-and C_MS (Eq. 11) are derived from S in train_strong_po, so gamma / variant ablations reuse them.
-
-    torchrun --nproc_per_node=N main.py stage=compute_ms_weights dataset=hh_rlhf model=opt
-"""
+"""S(x, y+), S(x, y-) between weak teacher and SFT student (Eq. 8-9).  main.py stage=compute_ms_weights"""
 
 from __future__ import annotations
 
@@ -26,7 +19,6 @@ log = logging.getLogger("mspo")
 
 
 def run(cfg: DictConfig) -> None:
-    # MS-PO always uses the weak-label SFT student.
     OmegaConf.update(cfg, "method.label_source", "weak", force_add=True)
     setup(cfg, "compute_ms_weights")
     out_file = cfg.paths.ms_weights_file

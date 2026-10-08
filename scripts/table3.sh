@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Table 3: reference-free SimPO for all three model pairs and datasets.
+# Table 3: SimPO. Options: MODELS, DATASETS, METHODS
 set -euo pipefail
 HERE="$(dirname "$0")"
 for model in ${MODELS:-opt qwen2_5 qwen3}; do

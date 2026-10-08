@@ -1,4 +1,4 @@
-# Qwen3-0.6B -> Qwen3-8B (Table 1).
+# Qwen3-0.6B -> Qwen3-8B
 family: qwen3
 weak:
   name: Qwen/Qwen3-0.6B

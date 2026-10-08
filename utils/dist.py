@@ -1,9 +1,4 @@
-"""Minimal multi-GPU helpers.
-
-Training stages run under `torchrun` / `accelerate launch` and rely on the HF Trainer for DDP.
-Inference stages (annotation, MS weights, generation, reward scoring) shard the dataset across
-ranks, each rank writes its shard, and rank 0 merges the shards in the original order.
-"""
+"""Multi-GPU helpers: rank info and sharded inference with ordered merging."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-# DPO (Rafailov et al., 2023), Eq. 7. beta = 0.5 (Table 5).
+# DPO (Eq. 7)
 name: dpo
 trainer: dpo
 trl_loss_type: sigmoid

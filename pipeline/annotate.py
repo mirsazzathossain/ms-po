@@ -1,9 +1,4 @@
-"""Stage 2: the weak teacher pseudo-labels D_unlabeled (Eq. 2, 4) and scores C_weak (Eq. 5).
-
-    torchrun --nproc_per_node=N main.py stage=annotate dataset=hh_rlhf model=opt
-
-Writes data/annotated/<dataset>/<weak>/unlabeled.jsonl (+ stats.json).
-"""
+"""Weak teacher labels D_unlabeled and scores C_weak.  main.py stage=annotate"""
 
 from __future__ import annotations
 

@@ -1,9 +1,4 @@
-"""Stage 1: weak teacher pi_w on D_labeled, SFT then DPO (SFT+PO, Appendix C.2), no LoRA (Table 4).
-
-    torchrun --nproc_per_node=N main.py stage=train_weak dataset=hh_rlhf model=opt
-
-Outputs checkpoints/<dataset>/weak/<weak>/{sft,dpo}. The SFT model is pi_ref,w (Eq. 2).
-"""
+"""Weak teacher: full fine-tuning, SFT then DPO on D_labeled.  main.py stage=train_weak"""
 
 from __future__ import annotations
 

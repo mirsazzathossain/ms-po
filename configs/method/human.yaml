@@ -1,5 +1,5 @@
-# Human: align pi_s on D_unlabeled with the human preference labels, uniform weights.
+# Human: human labels, uniform weights
 name: human
-label_source: human   # which labels define chosen/rejected (and the SFT chosen response)
+label_source: human   # human | weak
 weight: uniform       # uniform | cw | ms
 run_suffix: ""

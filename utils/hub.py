@@ -26,8 +26,7 @@ def push_folder(cfg: DictConfig, folder: str, name: str, commit_message: str) ->
     try:
         api.upload_folder(repo_id=repo_id, folder_path=folder, commit_message=commit_message, ignore_patterns=ignore)
     except ValueError as e:
-        # The model card PEFT writes has `base_model: <path>`; the Hub rejects it when the base
-        # model is a local directory. Upload the weights without the card.
+        # Hub rejects PEFT's card when base_model is a local path
         if "metadata in README.md" not in str(e):
             raise
         log.warning("Hub rejected the README.md model card (%s); uploading without it.", e)

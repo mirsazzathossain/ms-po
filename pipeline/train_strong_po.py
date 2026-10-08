@@ -1,12 +1,4 @@
-"""Stage 5: preference optimisation of the strong student (Eq. 6 / Eq. 12).
-
-    torchrun --nproc_per_node=N main.py stage=train_strong_po dataset=hh_rlhf model=opt method=ms_po loss=dpo
-
-method : human | ws_po | cw_po | ms_po   -> confidence C = 1 | 1 | C_weak | C_MS
-loss   : dpo | ipo | rdpo (TRL DPOTrainer)  |  simpo (TRL CPOTrainer, reference-free)
-As in resources/ms_po_ours/train.py: the policy is the (SFT) model + a LoRA adapter from
-peft_config and ref_model=None, so the reference model is the SFT model with the adapter disabled.
-"""
+"""Weighted preference optimisation of the strong student (Eq. 6 / 12).  main.py stage=train_strong_po method=<m> loss=<l>"""
 
 from __future__ import annotations
 

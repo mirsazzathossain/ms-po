@@ -1,6 +1,5 @@
 enabled: true
 project: ms-po
 entity: ${oc.env:WANDB_ENTITY,null}
-# Runs of the same (dataset, model pair) are grouped together in the W&B UI.
 group: ${dataset.name}-${model.weak.short}-to-${model.strong.short}
 tags: ["${dataset.name}", "${model.family}", "${method.name}", "${loss.name}"]

@@ -1,9 +1,4 @@
-"""Stage 0: download, parse, length-filter and split a preference dataset.
-
-Writes data/processed/<dataset>/{labeled,unlabeled,test}.jsonl and stats.json.
-
-    python main.py stage=prepare_data dataset=hh_rlhf
-"""
+"""Load, filter and split a dataset.  main.py stage=prepare_data dataset=<name>"""
 
 from __future__ import annotations
 

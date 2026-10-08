@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Appendix B: C_MS weighting variants (+ optional gamma sweep) for MS-PO.
-# Requires run_pipeline.sh to have finished for the chosen dataset/model.
-#   DATASET=hh_rlhf MODEL=opt VARIANTS="direct weak marginal bounded" GAMMAS="0.5 1.0 2.0" bash scripts/ablation.sh
+# Appendix B: C_MS variants for MS-PO (needs run_pipeline.sh done for DATASET/MODEL).
+# Options: DATASET, MODEL, LOSS (dpo), VARIANTS (direct weak marginal bounded), GAMMAS (1.0)
 source "$(dirname "$0")/common.sh"
 DATASET=${DATASET:-hh_rlhf}; MODEL=${MODEL:-opt}
 BASE=(dataset="${DATASET}" model="${MODEL}" method=ms_po loss="${LOSS:-dpo}" "$@")

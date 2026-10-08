@@ -1,7 +1,4 @@
-# Strong student preference optimisation. Table 5 / Appendix C.3:
-# 4 epochs, lr 5e-6, cosine, 100 warmup steps, weight decay 0.05, paged AdamW 32-bit,
-# batch 16 (4 for >7B models), grad-accum 4, gradient checkpointing, LoRA r=8 / alpha=16 / dropout 0.05.
-# beta comes from the loss config (0.5).
+# Strong student PO (Table 5); beta in loss config
 num_train_epochs: 4
 learning_rate: 5.0e-6
 lr_scheduler_type: cosine

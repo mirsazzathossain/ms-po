@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Shared helpers for all run scripts.
-#   NUM_GPUS : GPUs per node (default: all visible GPUs). >1 launches DDP via torchrun.
-#   MASTER_PORT : torchrun rendezvous port (default 29500).
+# Options: NUM_GPUS (default: all visible; >1 uses torchrun DDP), MASTER_PORT (29500)
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -18,7 +16,7 @@ if [[ -z "${NUM_GPUS:-}" ]]; then
   fi
 fi
 
-# launch <stage> [hydra overrides...]  -> main.py stage=<stage> on all GPUs (torchrun if NUM_GPUS > 1)
+# launch <stage> [hydra overrides...]
 launch() {
   local stage=$1; shift
   echo ">>> [$(date '+%F %T')] stage=${stage} $* (GPUs: ${NUM_GPUS})"
@@ -30,8 +28,7 @@ launch() {
   fi
 }
 
-# Paper (App. C.3): per-device batch 16, reduced to 4 for models exceeding 7B parameters
-# (Qwen2.5-7B = 7.6B, Qwen3-8B). Usage: big_model_overrides <hf model id> -> hydra overrides
+# App. C.3: per-device batch 4 for models > 7B params (Qwen2.5-7B, Qwen3-8B)
 big_model_overrides() {
   case "$1" in
     *-7B|*-8B)

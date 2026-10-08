@@ -1,13 +1,5 @@
-"""Weights & Biases integration.
-
-Every stage starts its own run in project `logger.project`:
-  * group    : `<dataset>-<weak>-to-<strong>` (all stages of one experiment), or `results` for summaries
-  * job_type : the stage (weak_sft, weak_po, annotate, strong_sft, ms_weights, strong_po, evaluate, results)
-  * tags     : dataset, model family, stage, and method / loss where they apply
-  * config   : the full Hydra config plus a flat `run.*` block (run.dataset, run.method, run.loss, ...)
-               so the W&B runs table can filter, group and pivot on them directly.
-Final numbers live under `results/*` in the evaluate and summary runs.
-"""
+"""W&B: one run per stage, grouped by experiment, flat `run.*` config for filtering;
+final numbers under `results/*`."""
 
 from __future__ import annotations
 
@@ -21,7 +13,6 @@ from utils.config import to_container
 
 log = logging.getLogger("mspo")
 
-# Stages whose runs depend on the alignment method / loss / label source.
 _METHOD_STAGES = ("strong_po", "evaluate")
 _LABEL_STAGES = ("strong_sft", "strong_po", "evaluate")
 

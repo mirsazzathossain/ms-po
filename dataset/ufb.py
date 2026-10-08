@@ -1,9 +1,4 @@
-"""UltraFeedback Binarized (HuggingFaceH4/ultrafeedback_binarized).
-
-No preprocessing script exists for UFB in resources/, so it mirrors the HH-RLHF pipeline:
-prompt = the user prompt, chosen/rejected = the final assistant message of each conversation,
-and the same max-length filter (resources/.../data_processing_hh_rlhf.py).
-"""
+"""UltraFeedback Binarized; no reference script, so it reuses the HH-RLHF length filter."""
 
 from __future__ import annotations
 

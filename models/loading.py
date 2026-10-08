@@ -1,13 +1,5 @@
-"""Model / tokenizer loading.
-
-Checkpoints
------------
-* Weak models are fully fine-tuned (Table 4: no LoRA) and saved as full HF checkpoints.
-* Strong models are trained with LoRA (Tables 5-6). Each strong checkpoint directory holds a
-  `lineage.json` = {"base": <hf id>, "adapters": [...]}: the adapters (paths relative to the
-  directory) merged, in order, into the base. A PO checkpoint keeps a copy of its SFT adapter in
-  `sft_adapter/`, so one directory (or Hub repo) rebuilds the model.
-"""
+"""Model / tokenizer loading. Strong checkpoints are LoRA adapters with a `lineage.json`
+listing the base model and the adapters to merge (relative paths)."""
 
 from __future__ import annotations
 
@@ -28,7 +20,6 @@ DTYPES = {"fp32": torch.float32, "fp16": torch.float16, "bf16": torch.bfloat16}
 
 def load_tokenizer(name_or_path: str):
     tokenizer = AutoTokenizer.from_pretrained(name_or_path)
-    # OPT models may not have a pad token configured.
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     return tokenizer
@@ -37,7 +28,6 @@ def load_tokenizer(name_or_path: str):
 def load_causal_lm(name_or_path: str, dtype: str = "fp32", device=None, pad_token_id: int | None = None):
     model = AutoModelForCausalLM.from_pretrained(name_or_path, torch_dtype=DTYPES[dtype])
     if pad_token_id is not None:
-        # Make sure model config knows the correct padding token.
         model.config.pad_token_id = pad_token_id
     if device is not None:
         model.to(device)

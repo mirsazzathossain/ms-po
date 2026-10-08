@@ -1,9 +1,4 @@
-"""Dataset registry and splits, following resources/ms_po_ours/utils/data_processing_hh_rlhf.py:
-
-    labeled, rest   = train.train_test_split(test_size=0.7, seed=42)   # D_labeled = 30%
-    unlabeled, val  = rest.train_test_split(test_size=0.01, seed=42)   # D_unlabeled, validation
-    test            = filtered test split
-"""
+"""Loader registry and splits: 30% labeled / 70% unlabeled, 1% of the 70% for validation."""
 
 from __future__ import annotations
 

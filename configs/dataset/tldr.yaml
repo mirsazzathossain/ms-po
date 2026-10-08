@@ -1,16 +1,13 @@
-# TL;DR (Stiennon et al., 2020), resources/ms_po_ours/datasets/tl_dr_dataset.py.
+# TL;DR (Stiennon et al., 2020)
 name: tldr
 loader: tldr
 hf_path: openai/summarize_from_feedback
 hf_name: comparisons
 train_split: train
 test_split: validation
-# Prompts longer than max_length whitespace tokens are dropped (resources); also TRL max_length.
-max_length: 1024
+max_length: 1024             # length filter (words) and training max_length
 length_tokenizer: openai-community/gpt2
 unlabeled_fraction: 0.7
 validation_fraction: 0.01
 reward_model: deberta
-# NOT GIVEN in the paper: the TL;DR test split (summarize_from_feedback validation) has ~86k
-# comparisons; GRA uses a fixed-seed random subset of this many prompts. eval.num_samples overrides it.
-eval_num_samples: 2000        # OpenAssistant/reward-model-deberta-v3-large-v2 (footnote 2)
+eval_num_samples: 2000       # NOT GIVEN in paper: GRA on a fixed-seed subset of the ~86k test comparisons

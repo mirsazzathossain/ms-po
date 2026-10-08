@@ -1,8 +1,6 @@
-# Robust DPO (Chowdhury et al., 2024) via TRL DPOTrainer loss_type="robust". beta = 0.5 (Table 5).
-# NOT GIVEN in the paper or resources: the label-noise rate epsilon (TRL `label_smoothing`).
-# TRL's default 0.0 reduces rDPO to DPO, so a value must be set; 0.1 is a placeholder.
+# Robust DPO
 name: rdpo
 trainer: dpo
 trl_loss_type: robust
 beta: 0.5
-label_smoothing: 0.1
+label_smoothing: 0.1    # NOT GIVEN in paper: noise rate epsilon (placeholder; 0 = plain DPO)

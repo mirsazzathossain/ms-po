@@ -37,8 +37,7 @@ def shard_path(path: str, r: int) -> str:
 
 
 def gather_shards(path: str, local_records: list[dict]) -> list[dict] | None:
-    """Each rank writes `local_records` (which must carry an `_idx` key); rank 0 merges them in
-    `_idx` order into `path` and returns the merged list. Other ranks return None."""
+    """Merge per-rank records (with `_idx`) into `path` in order; rank 0 returns them."""
     write_jsonl(shard_path(path, dist.rank()), local_records)
     dist.barrier()
     merged = None

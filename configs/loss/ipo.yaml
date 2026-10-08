@@ -1,4 +1,4 @@
-# IPO (Azar et al., 2024) via TRL DPOTrainer loss_type="ipo". beta = 0.5 (Table 5).
+# IPO
 name: ipo
 trainer: dpo
 trl_loss_type: ipo

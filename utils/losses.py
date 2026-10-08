@@ -1,14 +1,4 @@
-"""MS-PO / CW-PO confidence scores, ported from resources/ms_po_ours/utils/Compute_MS_PO.py
-(and the weak variant of resources/ms_po_ours/utils/MS_PO_1.py).
-
-Per response y of a pair (Eq. 8-10):
-    S(x, y)       = (1/T) sum_t sum_v pi_w(v|y<t,x) (log pi_w(v|y<t,x) - log pi_s(v|y<t,x))
-    C_align(x, y) = exp(-gamma * S(x, y))
-Per pair:
-    C_weak (CW-PO, Eq. 5) = clamp(2 * (sigmoid(p_w(y+) - p_w(y-)) - 0.5), 0, 1),
-                            p_w = length-normalised (geometric-mean) token probability under pi_w
-    C_MS   (Eq. 11)       = 2 * (sigmoid(C_align(y+) - C_align(y-)) - 0.5)
-"""
+"""Confidence scores: S, C_align, C_weak, C_MS (Eq. 5, 8-11, 25-28), from Compute_MS_PO.py."""
 
 from __future__ import annotations
 
@@ -38,19 +28,16 @@ def evaluate_sequence(
     `student_logits=None` skips the KL (S returned as 0)."""
     labels = input_ids[:, 1:]
     mask = response_mask(input_ids, attention_mask, prompt_lens)
-    # Models of one family may pad their embedding matrices to different sizes
-    # (e.g. Qwen2.5-0.5B vs 7B); every real token id lies in the common prefix.
+    # embedding sizes can differ within a family (Qwen2.5-0.5B vs 7B)
     vocab = weak_logits.size(-1) if student_logits is None else min(weak_logits.size(-1), student_logits.size(-1))
 
     s_xy, seq_logprobs, token_counts = [], [], []
     for i in range(input_ids.size(0)):
-        # Shift logits and labels for autoregressive sequence prediction
         weak_logprobs = F.log_softmax(weak_logits[i, :-1, :vocab].float(), dim=-1)
         m = mask[i]
         token_count = int(m.sum().item())
 
         if student_logits is not None:
-            # Full Vocabulary Token-Level KL Divergence: D_t
             student_logprobs = F.log_softmax(student_logits[i, :-1, :vocab].float(), dim=-1)
             weak_probs = torch.exp(weak_logprobs)
             token_kl = torch.sum(weak_probs * (weak_logprobs - student_logprobs), dim=-1)
@@ -58,7 +45,6 @@ def evaluate_sequence(
         else:
             s_xy.append(0.0)
 
-        # Log-probabilities of the actual response tokens under the weak model (for C_weak)
         selected = torch.gather(weak_logprobs, dim=-1, index=labels[i].unsqueeze(-1)).squeeze(-1)
         seq_logprobs.append((selected * m).sum().item())
         token_counts.append(token_count)

@@ -1,11 +1,4 @@
-"""Evaluation (Sec. 5.2): sampling, gold reward models and Gold Reward Accuracy.
-
-* Sampling: temperature 0.95, at most 512 new tokens (Appendix C.3).
-* Gold RMs: Skywork/Skywork-Reward-V2-Llama-3.1-8B for HH-RLHF and UFB, scored on the chat
-  [user: prompt, assistant: response] as in its model card; OpenAssistant/reward-model-deberta-v3-large-v2
-  for TL;DR, scored on the (prompt, response) pair as in its model card.
-* GRA = (1/N) sum_i 1[R(x_i, y_aligned) > R(x_i, y_SFT)] (Eq. 13).
-"""
+"""Sampling, gold reward models and Gold Reward Accuracy."""
 
 from __future__ import annotations
 

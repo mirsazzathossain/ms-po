@@ -1,4 +1,4 @@
-# UltraFeedback Binarized (Cui et al., 2023): ~61.1k train / 2k test.
+# UltraFeedback Binarized (Cui et al., 2023)
 name: ufb
 loader: ufb
 hf_path: HuggingFaceH4/ultrafeedback_binarized

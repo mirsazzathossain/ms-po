@@ -1,13 +1,4 @@
-"""Stage 6: Gold Reward Accuracy (Eq. 13) of an aligned strong model against its SFT baseline.
-
-    torchrun --nproc_per_node=N main.py stage=evaluate dataset=hh_rlhf model=opt method=ms_po loss=dpo
-
-1. sample responses on the test prompts from the SFT model (cached per label source) and from the
-   aligned model (temperature 0.95, 512 new tokens),
-2. score both with the gold reward model (Skywork-Reward-V2-Llama-3.1-8B or OA DeBERTa),
-3. GRA = fraction of prompts where R(x, y_aligned) > R(x, y_SFT).
-Outputs live in outputs/<dataset>/<strong>/{generations,results}/.
-"""
+"""Gold Reward Accuracy of the aligned model vs. its SFT model (Eq. 13).  main.py stage=evaluate"""
 
 from __future__ import annotations
 
@@ -86,7 +77,7 @@ def run(cfg: DictConfig) -> None:
     test = read_jsonl(processed_file(cfg, "test"))
     n_eval = cfg.eval.num_samples or cfg.dataset.get("eval_num_samples")
     if n_eval and n_eval < len(test):
-        # fixed-seed random subset, identical for every model / method of a dataset
+        # same fixed-seed subset for every model / method
         keep = sorted(random.Random(cfg.seed).sample(range(len(test)), n_eval))
         test = [test[i] for i in keep]
     prompts = [r["prompt"] for r in test]

@@ -1,4 +1,4 @@
-# OPT-125M -> OPT-6.7B (Table 1). Table 2 sweeps model.strong.name over 1.3b / 2.7b / 6.7b.
+# OPT-125M -> OPT-6.7B
 family: opt
 weak:
   name: facebook/opt-125m
@@ -6,5 +6,4 @@ weak:
 strong:
   name: facebook/opt-6.7b
   short: ${basename:${model.strong.name}}
-# LoRA targets for the strong student (Tables 5-6).
 lora_target_modules: [q_proj, v_proj]

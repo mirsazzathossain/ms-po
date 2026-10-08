@@ -1,18 +1,9 @@
 #!/usr/bin/env bash
-# Small end-to-end test of every runner script with tiny random GPT-2 models and 48 samples per
-# split. Checks the plumbing only (all datasets, stages, methods, losses, scripts); the GRA numbers
-# are meaningless. Everything goes to .smoke/ so real data and checkpoints are untouched.
-#
-#   bash scripts/smoke_test.sh                          # W&B and Hub off
-#   bash scripts/smoke_test.sh logger=wandb hub.push=true
-#
-# Covers: run_pipeline.sh (all 4 methods, DPO), table1.sh (TL;DR + UFB loaders, rDPO),
-# table2.sh (student-size loop), table3.sh (SimPO), ablation.sh (C_MS variants, IPO),
-# and collect_results.
+# Runs every script with tiny random models and 48 samples per split; output in .smoke/.
+#   bash scripts/smoke_test.sh [logger=wandb hub.push=true]
 source "$(dirname "$0")/common.sh"
 export MSPO_ROOT="${ROOT_DIR}/.smoke"
 
-# Tiny random GPT-2 weak/strong policies + reward model sharing the GPT-2 tokenizer.
 python - <<'PY'
 import os
 from transformers import AutoTokenizer, GPT2Config, GPT2ForSequenceClassification, GPT2LMHeadModel
@@ -23,7 +14,7 @@ for name, n_embd, cls in (("weak", 32, GPT2LMHeadModel), ("strong", 64, GPT2LMHe
     out = os.path.join(root, name)
     if os.path.exists(out):
         continue
-    # 2048 positions: TL;DR prompts can exceed 1024 tokens before generation.
+    # TL;DR prompts can exceed 1024 tokens
     cfg = GPT2Config(n_layer=2, n_head=2, n_embd=n_embd, n_positions=2048, num_labels=1,
                      pad_token_id=tok.eos_token_id)
     cls(cfg).save_pretrained(out)
@@ -47,7 +38,7 @@ DATASET=hh_helpful MODEL=opt LOSSES=dpo bash scripts/run_pipeline.sh "${SMALL[@]
 echo "=== 2/5 table1.sh: TL;DR + UFB loaders, rDPO"
 MODELS=opt DATASETS="tldr ufb" LOSSES=rdpo METHODS="human ms_po" bash scripts/table1.sh "${SMALL[@]}"
 
-echo "=== 3/5 table2.sh: student-size loop (sizes collapse to the tiny student)"
+echo "=== 3/5 table2.sh: student-size loop"
 MODELS=opt DATASETS=hh_helpful METHODS="cw_po" bash scripts/table2.sh "${SMALL[@]}"
 
 echo "=== 4/5 table3.sh: SimPO"
