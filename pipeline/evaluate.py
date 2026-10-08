@@ -24,7 +24,7 @@ from models.loading import DTYPES
 from utils import dist
 from utils.common import is_done, processed_file, require, run_name, setup
 from utils.io import gather_shards, read_jsonl, write_json
-from utils.logging import finish_wandb, setup_wandb, wandb_log
+from utils.logging import finish_wandb, log_artifact, log_table, setup_wandb, wandb_log
 
 log = logging.getLogger("mspo")
 
@@ -116,18 +116,25 @@ def run(cfg: DictConfig) -> None:
         write_json(result_file, result)
         log.info("GRA = %.2f%% (%s)", 100 * gra, result)
         setup_wandb(cfg, run_name(cfg, f"{cfg.model.strong.short}-{tag}-eval"), "evaluate")
-        wandb_log({"eval/gra": result["gra"], "eval/reward_aligned": result["reward_aligned_mean"],
-                   "eval/reward_sft": result["reward_sft_mean"]})
-        try:
-            import wandb
-
-            if wandb.run is not None:
-                table = wandb.Table(columns=["prompt", "sft", "aligned", "r_sft", "r_aligned"])
-                for i in range(min(50, n)):
-                    table.add_data(prompts[i], sft_rows[i]["response"], po_rows[i]["response"], sft_scores[i], po_scores[i])
-                wandb.log({"eval/samples": table})
-        except ImportError:
-            pass
+        wandb_log({
+            "results/gra": result["gra"],
+            "results/reward_aligned_mean": result["reward_aligned_mean"],
+            "results/reward_sft_mean": result["reward_sft_mean"],
+            "results/n": n,
+        })
+        log_table(
+            "results/per_prompt",
+            ["prompt", "sft_response", "aligned_response", "reward_sft", "reward_aligned", "aligned_wins"],
+            [[prompts[i], sft_rows[i]["response"], po_rows[i]["response"], sft_scores[i], po_scores[i],
+              po_scores[i] > sft_scores[i]] for i in range(n)],
+        )
+        log_artifact(
+            f"eval-{cfg.dataset.name}-{cfg.model.strong.short}-{tag}",
+            "evaluation",
+            [result_file, sft_file, po_file] + [f.replace(".jsonl", f".reward_{cfg.dataset.reward_model}.jsonl")
+                                                for f in (sft_file, po_file)],
+            metadata=result,
+        )
         finish_wandb()
     dist.cleanup()
 

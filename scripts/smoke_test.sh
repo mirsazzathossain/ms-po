@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # End-to-end CPU/GPU smoke test with tiny random models and a few hundred HH-RLHF pairs.
-# Checks the plumbing only; numbers are meaningless.
+# Checks the plumbing only; numbers are meaningless. Extra Hydra overrides are appended, e.g.
+#   bash scripts/smoke_test.sh logger=wandb hub.push=true
 source "$(dirname "$0")/common.sh"
 export MSPO_ROOT="${ROOT_DIR}/.smoke"
 NUM_GPUS=${NUM_GPUS:-0}
@@ -16,6 +17,7 @@ SMALL=(
   train.strong_sft.per_device_train_batch_size=4 train.strong_po.per_device_train_batch_size=4
   train.strong_sft.gradient_accumulation_steps=1 train.strong_po.gradient_accumulation_steps=1
   train.strong_sft.warmup_steps=0 train.strong_po.warmup_steps=0
+  "$@"
 )
 SMOKE_N=${SMOKE_N:-200}
 

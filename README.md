@@ -28,16 +28,19 @@ ms-po/
 │   ├── loss/               #   dpo, ipo, rdpo, simpo
 │   ├── train/              #   weak_sft, weak_po, strong_sft, strong_po (Tables 4-6)
 │   ├── eval/ logger/ hub/ paths/
-├── dataset/                # dataset code: loaders, length filter + 30/70 split, tokenisation, weak labels
-├── models/                 # model code: loading, LoRA, adapter lineage, batched scoring
+├── dataset/                # dataset code: HH-RLHF / TL;DR / UFB loaders, length filters, splits, weak labels
+├── models/                 # model code: loading, LoRA config, adapter lineage, batched teacher/student scoring
 ├── pipeline/               # one module per stage, each exposing run(cfg)
-├── utils/                  # losses + weights, trainer, evaluation, distributed, W&B, HF Hub, io
+├── utils/                  # confidence scores (losses.py), TRL trainers (trainer.py), evaluation,
+│                           #   W&B (logging.py), HF Hub (hub.py), distributed helpers, io
 ├── scripts/                # shell runners (pipeline, Tables 1-3, ablations, smoke test)
 ├── data/                   # datasets (generated; see data/README.md)
 ├── checkpoints/            # trained weights (generated)
 ├── outputs/                # generations, GRA results, Hydra logs (generated)
 ├── Dockerfile  docker-compose.yml  requirements.txt  .env.example
 ```
+
+`resources/` (paper PDF + original reference code) is kept locally and is git-ignored.
 
 ## Sources
 
@@ -71,7 +74,7 @@ details come from the reference code.
 | 4 | `compute_ms_weights`: S(x,y⁺), S(x,y⁻) between the weak DPO teacher and the SFT student | `data/annotated/<ds>/<weak>/ms_weights_<strong>.jsonl` |
 | 5 | `train_strong_po`: weighted preference optimisation (LoRA; reference model = SFT) | `checkpoints/<ds>/strong/<strong>/<method>_<loss>` |
 | 6 | `evaluate`: sample (T=0.95, 512 tokens) from the SFT and aligned models, then compute gold RM GRA | `outputs/<ds>/<strong>/results/*.json` |
-| 7 | `collect_results`: build a Table-1-style summary | `outputs/results.{md,csv}` |
+| 7 | `collect_results`: build Table-1-style summaries (also logged to W&B) | `outputs/results.{md,csv}` |
 
 A stage that has already finished is skipped. Pass `overwrite=true` to run it again.
 
@@ -88,20 +91,40 @@ docker compose build
 docker compose run --rm ms-po bash scripts/run_pipeline.sh
 ```
 
-**Plain Python / Google Colab:**
+**Plain Python:** install `torch==2.11.0` for your CUDA version, then:
 
 ```bash
-git clone <repo> ms-po && cd ms-po
+git clone https://github.com/mirsazzathossain/ms-po && cd ms-po
 pip install -r requirements.txt
-wandb login            # or: export WANDB_API_KEY=...
-huggingface-cli login  # needed for hub.push=true and the gated Llama-based Skywork RM
-bash scripts/smoke_test.sh                                  # ~10 min plumbing check, tiny models
+bash scripts/smoke_test.sh                                  # plumbing check with tiny models (W&B off)
+bash scripts/smoke_test.sh logger=wandb hub.push=true       # same, also exercising W&B and the Hub
 DATASET=hh_rlhf MODEL=opt LOSSES=dpo bash scripts/run_pipeline.sh
 ```
 
-On Colab, keep `data/`, `checkpoints/` and `outputs/` on Google Drive so a disconnect does not
-lose finished stages. Point `MSPO_ROOT` at a Drive folder, or symlink the three folders into it.
-Because finished stages are skipped, you can rerun the same command after a disconnect to resume.
+The smoke test builds tiny random GPT-2 models and uses about 50 HH-RLHF pairs, so its GRA
+numbers are meaningless (usually 0.0, since the samples tie). It only checks that every stage runs.
+
+`scripts/common.sh` loads `.env`, so W&B and the Hub pick up `WANDB_API_KEY` and `HF_TOKEN`.
+You also need to accept the license of the gated Skywork-Reward-V2-Llama-3.1-8B gold reward model.
+
+**Google Colab:** Colab ships newer transformers / huggingface_hub than this repo pins, and
+installing the pins globally would break Colab's own packages. Use a venv that reuses Colab's
+torch 2.11 instead. This is the setup the pipeline was tested with on an A100:
+
+```bash
+cd /content && git clone https://github.com/mirsazzathossain/ms-po && cd ms-po
+python3 -m venv --without-pip --system-site-packages /content/venv
+curl -sS https://bootstrap.pypa.io/get-pip.py | /content/venv/bin/python -
+/content/venv/bin/pip install -r requirements.txt
+source /content/venv/bin/activate
+export USE_TF=0 TRANSFORMERS_NO_TF=1      # keep Colab's TensorFlow from being imported
+cp .env.example .env                      # fill in WANDB_* and HF_*
+bash scripts/smoke_test.sh logger=wandb hub.push=true
+```
+
+Keep `data/`, `checkpoints/` and `outputs/` on Google Drive (point `MSPO_ROOT` at a Drive folder)
+so a disconnect does not lose finished stages. Finished stages are skipped, so rerunning the same
+command resumes.
 
 ## Running experiments
 
@@ -135,15 +158,36 @@ torchrun --nproc_per_node=4 main.py stage=train_strong_po dataset=hh_rlhf model=
 
 Batch sizes are per device. The effective batch is `per_device × grad_accum × NUM_GPUS`. To keep
 the paper's effective batch of 64 on N GPUs, lower `train.strong_po.gradient_accumulation_steps`
-(and the matching SFT setting). The scripts follow the paper and drop the per-device batch to 4 for
-7B/8B students.
+(and the matching SFT setting). Following App. C.3, the scripts drop the per-device batch to 4 for
+students larger than 7B parameters (Qwen2.5-7B, Qwen3-8B).
+
+### Hardware
+
+| GPU memory | What fits |
+|---|---|
+| 8-12 GB (fp16 only, e.g. RTX 2080) | smoke test; weak teachers; 1.3B-3B students with `model_dtype=fp16`; TL;DR (DeBERTa RM) evaluation |
+| 40 GB (A100) | everything, with `model_dtype=bf16` for 7B/8B students and the Skywork 8B RM |
+| 80 GB | everything with the reference code's fp32 model loading |
+
+With `model_dtype=fp16`, run `train_weak` without it: the weak teachers are fully fine-tuned and
+need fp32 weights.
 
 ## Logging and weights
 
-- **W&B:** project `ms-po`, with runs grouped by `<dataset>-<weak>-to-<strong>`. Training logs
-  include TRL's DPO metrics: loss, rewards, accuracies, margins and log-probs. Annotation and
-  MS-weight runs log weak-label accuracy and C_weak/C_MS statistics.
-  Evaluation logs GRA and a table of sample generations.
+- **W&B** (project `ms-po`): every stage is its own run.
+  - **Runs:** grouped by `<dataset>-<weak>-to-<strong>`, with `job_type` = stage and tags for
+    dataset, family, stage, label source, method and loss. Each run's config has a flat `run.*`
+    block (`run.dataset`, `run.pair`, `run.method`, `run.loss`, `run.ms_gamma`, ...), so the runs
+    table can be grouped or pivoted directly.
+  - **Training runs:** TRL's metrics (loss, rewards, accuracies, margins, log-probs), train and eval.
+  - **Annotation / MS-weight runs:** weak-label accuracy vs. human labels, and C_weak / S / C_MS statistics.
+  - **Evaluation runs:** `results/gra`, `results/reward_aligned_mean` and `results/reward_sft_mean`,
+    plus a full `results/per_prompt` table (prompt, both responses, both rewards, win flag) and an
+    `evaluation` artifact with the result JSON, generations and reward scores.
+  - **Summary run:** `main.py stage=collect_results` (run automatically by the scripts) logs
+    `results-summary` in group `results`. It holds one table per (model pair, loss) in the
+    layout of Table 1, a `results/all` table and a `results-summary` artifact with the CSV and
+    Markdown.
 - **HF Hub** (`hub.push=true`): weak models are uploaded as full checkpoints, strong models as
   LoRA adapters plus `lineage.json`. Each PO repo also includes its SFT adapter, so the repo alone
   is enough to rebuild the model with `models.loading.load_merged(<dir>)`.
@@ -173,3 +217,14 @@ Changes made so the reference code runs:
   shared vocabulary prefix.
 - **TRL API:** `CW_PO.py`'s overrides are adapted to the TRL 0.21 `dpo_loss` and
   `concatenated_forward` signatures.
+- **SimPO:** TRL's CPOTrainer requires `max_prompt_length < max_length`, so it uses half of
+  `max_length` (CPOConfig's own default ratio).
+- **Hub upload:** if the Hub rejects PEFT's auto-generated model card (its `base_model` is a local
+  path), the checkpoint is uploaded without `README.md`.
+
+## Tested environment
+
+The full pipeline (smoke test with W&B and Hub upload) has been run end to end on Colab with an
+A100-SXM4 40 GB, Python 3.13, torch 2.11.0+cu130, and the exact package versions in
+`requirements.txt`. The Docker image uses the matching `pytorch/pytorch:2.11.0-cuda13.0-cudnn9-runtime`
+base, which needs NVIDIA driver >= 580; on older drivers switch to the `cuda12.8` tag.

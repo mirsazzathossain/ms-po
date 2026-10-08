@@ -22,11 +22,17 @@ def push_folder(cfg: DictConfig, folder: str, name: str, commit_message: str) ->
     repo_id = f"{cfg.hub.user}/{cfg.hub.prefix}-{name}"[:96]
     api = HfApi()
     api.create_repo(repo_id, private=cfg.hub.private, exist_ok=True)
-    api.upload_folder(
-        repo_id=repo_id,
-        folder_path=folder,
-        commit_message=commit_message,
-        ignore_patterns=["checkpoint-*", "*.pt", "runs/*"],
-    )
+    ignore = ["checkpoint-*", "*.pt", "runs/*"]
+    try:
+        api.upload_folder(repo_id=repo_id, folder_path=folder, commit_message=commit_message, ignore_patterns=ignore)
+    except ValueError as e:
+        # The model card PEFT writes has `base_model: <path>`; the Hub rejects it when the base
+        # model is a local directory. Upload the weights without the card.
+        if "metadata in README.md" not in str(e):
+            raise
+        log.warning("Hub rejected the README.md model card (%s); uploading without it.", e)
+        api.upload_folder(
+            repo_id=repo_id, folder_path=folder, commit_message=commit_message, ignore_patterns=ignore + ["README.md"]
+        )
     log.info("Pushed %s to https://huggingface.co/%s", folder, repo_id)
     return repo_id

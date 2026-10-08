@@ -1,15 +1,17 @@
-# Tested versions. torch comes from the Docker base image (or Colab); >=2.4 required.
-torch>=2.4
+torch==2.11.0
 transformers==4.56.2
-trl==0.21.0                # resources req.txt: trl>=0.20
+trl==0.21.0
 peft==0.17.1
 accelerate==1.10.1
 datasets==3.6.0
-bitsandbytes>=0.45.0      # paged_adamw_32bit optimizer (CUDA only)
+tokenizers==0.22.2
+safetensors==0.8.0
+bitsandbytes==0.50.2
 hydra-core==1.3.2
+omegaconf==2.3.1
 wandb==0.21.4
-huggingface_hub>=0.34,<1.0
-sentencepiece
-protobuf
-numpy
-tqdm
+huggingface_hub==0.36.2
+sentencepiece==0.2.2
+protobuf==6.33.6
+numpy==2.1.3
+tqdm==4.67.3

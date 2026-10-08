@@ -1,8 +1,3 @@
-# GPU container with data / checkpoints / outputs / HF cache mounted from the host.
-# Needs the NVIDIA Container Toolkit. Secrets come from .env (see .env.example).
-#   docker compose build
-#   docker compose run --rm ms-po bash scripts/run_pipeline.sh
-#   NUM_GPUS=4 docker compose run --rm ms-po bash scripts/table1.sh
 services:
   ms-po:
     build: .

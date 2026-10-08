@@ -1,7 +1,4 @@
-# MS-PO training / evaluation image (CUDA 12.4, PyTorch 2.5.1).
-#   docker build -t ms-po .
-#   docker compose run --rm ms-po bash scripts/run_pipeline.sh
-FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+FROM pytorch/pytorch:2.11.0-cuda13.0-cudnn9-runtime
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
