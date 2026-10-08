@@ -1,0 +1,6 @@
+# Push finished checkpoints (full weak models, LoRA adapters for strong models) to the HF Hub.
+push: false
+user: ${oc.env:HF_USERNAME,null}
+private: true
+# Repo id: <user>/<prefix>-<dataset>-<model>-<stage>
+prefix: mspo

@@ -1,0 +1,23 @@
+# All artifacts are addressed through these paths so stages can find each other's outputs.
+root_dir: ${oc.env:MSPO_ROOT,${hydra:runtime.cwd}}
+data_dir: ${paths.root_dir}/data
+checkpoints_dir: ${paths.root_dir}/checkpoints
+outputs_dir: ${paths.root_dir}/outputs
+
+# data/processed/<dataset>/{labeled,unlabeled,test}.jsonl  (30% / 70% split of the filtered train set)
+processed_dir: ${paths.data_dir}/processed/${dataset.name}
+# data/annotated/<dataset>/<weak>/unlabeled.jsonl  (weak pseudo-labels + C_weak)
+annotated_dir: ${paths.data_dir}/annotated/${dataset.name}/${model.weak.short}
+
+weak_dir: ${paths.checkpoints_dir}/${dataset.name}/weak/${model.weak.short}
+weak_sft_dir: ${paths.weak_dir}/sft
+weak_po_dir: ${paths.weak_dir}/dpo
+
+strong_dir: ${paths.checkpoints_dir}/${dataset.name}/strong/${model.strong.short}
+# SFT checkpoints depend on whose labels define the chosen response.
+strong_sft_dir: ${paths.strong_dir}/sft_${method.label_source}
+strong_po_dir: ${paths.strong_dir}/${method.name}_${loss.name}${method.run_suffix}
+# MS-PO weights depend on both teacher and student.
+ms_weights_file: ${paths.annotated_dir}/ms_weights_${model.strong.short}.jsonl
+
+eval_dir: ${paths.outputs_dir}/${dataset.name}/${model.strong.short}

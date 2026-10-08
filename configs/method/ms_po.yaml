@@ -1,0 +1,6 @@
+# MS-PO (ours): weak pseudo-labels weighted by the multi-granular student-aware score C_MS (Eq. 8-12).
+# Variant / gamma live under the root `ms:` key. run_suffix keeps ablations apart.
+name: ms_po
+label_source: weak
+weight: ms
+run_suffix: ${ms_suffix:${ms.variant},${ms.gamma}}

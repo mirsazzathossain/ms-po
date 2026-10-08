@@ -1,0 +1,41 @@
+# Root Hydra config for MS-PO. Every stage composes this file and reads only the sub-trees it
+# needs. Select the stage and components from the command line, e.g.
+#   python main.py stage=train_strong_po dataset=hh_rlhf model=opt method=ms_po loss=dpo
+defaults:
+  - paths: default
+  - dataset: hh_rlhf
+  - model: opt
+  - method: ms_po
+  - loss: dpo
+  - train@train.weak_sft: weak_sft
+  - train@train.weak_po: weak_po
+  - train@train.strong_sft: strong_sft
+  - train@train.strong_po: strong_po
+  - eval: default
+  - logger: wandb
+  - hub: default
+  - _self_
+
+stage: ???   # prepare_data | train_weak | annotate | train_strong_sft | compute_ms_weights | train_strong_po | evaluate | collect_results
+seed: 42
+# Mixed precision. resources/ms_po_ours/utils/mange_config.py: fp16=torch.cuda.is_available().
+precision: fp16
+# dtype the models are loaded in. resources/train.py uses AutoModelForCausalLM.from_pretrained
+# without torch_dtype (fp32); set bf16 to halve memory for 7B/8B students.
+model_dtype: fp32
+# Batch size per GPU for annotation / MS-weight scoring.
+infer_batch_size: 4
+# Overwrite existing stage outputs instead of skipping finished stages.
+overwrite: false
+
+# Multi-granular student-aware weighting (Sec. 4; resources/ms_po_ours/utils/Compute_MS_PO.py).
+ms:
+  gamma: 1.0       # C_align = exp(-gamma * S(x, y)) (Eq. 10); default of compute_ms_po_scores
+  # direct (Eq. 11, main method) | weak (Eq. 25) | marginal (Eq. 26) | bounded (Eq. 27) | normalized (Eq. 28)
+  variant: direct
+
+hydra:
+  run:
+    dir: ${paths.root_dir}/outputs/hydra/${stage}/${now:%Y-%m-%d_%H-%M-%S}
+  job:
+    chdir: false

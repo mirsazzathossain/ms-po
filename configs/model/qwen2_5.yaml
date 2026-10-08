@@ -1,0 +1,9 @@
+# Qwen2.5-0.5B -> Qwen2.5-7B (Table 1). Table 2 sweeps 1.5B / 3B / 7B.
+family: qwen2_5
+weak:
+  name: Qwen/Qwen2.5-0.5B
+  short: ${basename:${model.weak.name}}
+strong:
+  name: Qwen/Qwen2.5-7B
+  short: ${basename:${model.strong.name}}
+lora_target_modules: [q_proj, v_proj]

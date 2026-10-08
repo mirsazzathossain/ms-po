@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.env
+.smoke/
+outputs/
+checkpoints/
+wandb/
+data/*
+!data/README.md
+resources/
+.smoke/
+.venv/
+venv/

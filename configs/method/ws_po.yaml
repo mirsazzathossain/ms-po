@@ -1,0 +1,5 @@
+# WS-PO (Tao & Li, 2025): weak-teacher pseudo-labels, uniform weights.
+name: ws_po
+label_source: weak
+weight: uniform
+run_suffix: ""

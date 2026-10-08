@@ -1,0 +1,17 @@
+# Weak teacher DPO on D_labeled (Eq. 3), from the weak SFT model. Table 4 hyperparameters.
+# beta_w (Eq. 2) is not in the paper: BETA = 0.1 from resources/ms_po_ours/configs/opt_125M.yaml.
+num_train_epochs: 4
+learning_rate: 1.0e-5
+lr_scheduler_type: linear
+warmup_steps: 0
+weight_decay: 0.0
+optim: adamw_torch
+per_device_train_batch_size: 32
+per_device_eval_batch_size: 32
+gradient_accumulation_steps: 1
+gradient_checkpointing: false
+lora: null
+beta: 0.1
+logging_steps: 10
+eval_steps: 500
+save_steps: 500

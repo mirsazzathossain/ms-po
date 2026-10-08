@@ -1,0 +1,18 @@
+# Weak teacher SFT on D_labeled (Appendix C.2: SFT+PO). Table 4 / Appendix C.3:
+# 4 epochs, Adam, lr 1e-5, batch 32, grad-accum 1, no LoRA.
+# Items not in Table 4 (scheduler, warmup, weight decay, eval/save/logging steps, gradient
+# checkpointing) follow resources/ms_po_ours/configs/opt_125M.yaml or the HF defaults.
+num_train_epochs: 4
+learning_rate: 1.0e-5
+lr_scheduler_type: linear
+warmup_steps: 0
+weight_decay: 0.0
+optim: adamw_torch
+per_device_train_batch_size: 32
+per_device_eval_batch_size: 32
+gradient_accumulation_steps: 1
+gradient_checkpointing: false
+lora: null
+logging_steps: 10
+eval_steps: 500
+save_steps: 500

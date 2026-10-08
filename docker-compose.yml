@@ -1,0 +1,26 @@
+# GPU container with data / checkpoints / outputs / HF cache mounted from the host.
+# Needs the NVIDIA Container Toolkit. Secrets come from .env (see .env.example).
+#   docker compose build
+#   docker compose run --rm ms-po bash scripts/run_pipeline.sh
+#   NUM_GPUS=4 docker compose run --rm ms-po bash scripts/table1.sh
+services:
+  ms-po:
+    build: .
+    image: ms-po:latest
+    env_file: .env
+    environment:
+      - NUM_GPUS=${NUM_GPUS:-}
+    volumes:
+      - ./data:/workspace/ms-po/data
+      - ./checkpoints:/workspace/ms-po/checkpoints
+      - ./outputs:/workspace/ms-po/outputs
+      - ${HF_CACHE:-~/.cache/huggingface}:/workspace/.cache/huggingface
+    shm_size: 32gb
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

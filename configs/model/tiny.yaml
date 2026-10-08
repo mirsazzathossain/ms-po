@@ -1,0 +1,9 @@
+# Tiny random GPT-2 models for the smoke test only (built by scripts/experiments/smoke_test.sh).
+family: tiny
+weak:
+  name: ${oc.env:MSPO_ROOT}/tiny_models/weak
+  short: tiny-weak
+strong:
+  name: ${oc.env:MSPO_ROOT}/tiny_models/strong
+  short: tiny-strong
+lora_target_modules: [c_attn]

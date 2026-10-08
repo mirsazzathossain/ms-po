@@ -1,0 +1,9 @@
+# Qwen3-0.6B -> Qwen3-8B (Table 1).
+family: qwen3
+weak:
+  name: Qwen/Qwen3-0.6B
+  short: ${basename:${model.weak.name}}
+strong:
+  name: Qwen/Qwen3-8B
+  short: ${basename:${model.strong.name}}
+lora_target_modules: [q_proj, v_proj]

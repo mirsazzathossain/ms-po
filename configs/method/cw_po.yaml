@@ -1,0 +1,5 @@
+# CW-PO (Afzali et al., 2026): weak pseudo-labels weighted by teacher confidence C_weak (Eq. 5-6).
+name: cw_po
+label_source: weak
+weight: cw
+run_suffix: ""

@@ -1,0 +1,10 @@
+# Gold Reward Accuracy (Eq. 13): fraction of test prompts where R(x, y_aligned) > R(x, y_SFT).
+num_samples: null          # null -> full filtered test split
+# Generation (Appendix C.3, following CW-PO): temperature 0.95, at most 512 new tokens.
+temperature: 0.95
+max_new_tokens: 512
+generation_batch_size: 16
+reward_batch_size: 8
+reward_models:
+  skywork: Skywork/Skywork-Reward-V2-Llama-3.1-8B          # HH-RLHF, UFB (Sec. 5.2)
+  deberta: OpenAssistant/reward-model-deberta-v3-large-v2  # TL;DR (footnote 2)

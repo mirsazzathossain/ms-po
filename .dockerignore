@@ -1,0 +1,11 @@
+.git
+.env
+.smoke
+data
+checkpoints
+outputs
+wandb
+resources
+**/__pycache__
+venv
+.venv

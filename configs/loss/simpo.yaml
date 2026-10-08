@@ -1,0 +1,9 @@
+# SimPO (Meng et al., 2024), reference-free (Table 3), via TRL CPOTrainer loss_type="simpo"
+# with cpo_alpha=0 (pure SimPO, no NLL term).
+# NOT GIVEN in the paper or resources: beta / gamma; TRL CPOConfig defaults are used.
+name: simpo
+trainer: cpo
+trl_loss_type: simpo
+beta: 0.1
+simpo_gamma: 0.5
+cpo_alpha: 0.0

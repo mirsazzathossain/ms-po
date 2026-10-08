@@ -1,0 +1,11 @@
+# UltraFeedback Binarized (Cui et al., 2023): ~61.1k train / 2k test.
+name: ufb
+loader: ufb
+hf_path: HuggingFaceH4/ultrafeedback_binarized
+train_split: train_prefs
+test_split: test_prefs
+max_length: 512
+length_tokenizer: openai-community/gpt2
+unlabeled_fraction: 0.7
+validation_fraction: 0.01
+reward_model: skywork

@@ -1,0 +1,20 @@
+# Strong student SFT on D_unlabeled (prompt, chosen). Table 6 / Appendix C.3:
+# 4 epochs, lr 1e-5, cosine, 100 warmup steps, weight decay 0.05, paged AdamW 32-bit,
+# batch 16 (4 for >7B models), grad-accum 4, gradient checkpointing, LoRA r=8 / alpha=16 / dropout 0.05.
+num_train_epochs: 4
+learning_rate: 1.0e-5
+lr_scheduler_type: cosine
+warmup_steps: 100
+weight_decay: 0.05
+optim: paged_adamw_32bit
+per_device_train_batch_size: 16
+per_device_eval_batch_size: 16
+gradient_accumulation_steps: 4
+gradient_checkpointing: true
+lora:
+  r: 8
+  alpha: 16
+  dropout: 0.05
+logging_steps: 10
+eval_steps: 500
+save_steps: 500
