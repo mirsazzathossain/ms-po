@@ -113,7 +113,7 @@ an A100, mostly dataset preparation and process start-up.
 `scripts/colab_setup.sh` builds a venv on top of Colab's torch (the tested setup, A100):
 
 ```bash
-!git clone https://<github-token>@github.com/mirsazzathossain/ms-po.git /content/ms-po
+!git clone https://github.com/mirsazzathossain/ms-po.git /content/ms-po
 !bash /content/ms-po/scripts/colab_setup.sh
 # .env with WANDB_API_KEY, WANDB_ENTITY, HF_TOKEN, HF_USERNAME (e.g. from Colab secrets)
 !source /content/env.sh && METHOD=ms_po LOSS=dpo bash scripts/run_experiment.sh model_dtype=bf16 precision=bf16
