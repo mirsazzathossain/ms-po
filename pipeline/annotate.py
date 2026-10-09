@@ -10,7 +10,7 @@ from omegaconf import DictConfig
 
 from dataset.weak_labels import annotate_pairs
 from models import load_causal_lm, load_tokenizer, score_pairs
-from utils import dist
+from utils import dist, hub
 from utils.common import is_done, processed_file, require, run_name, setup
 from utils.io import gather_shards, read_jsonl, write_json
 from utils.logging import finish_wandb, setup_wandb, wandb_log
@@ -21,7 +21,8 @@ log = logging.getLogger("mspo")
 def run(cfg: DictConfig) -> None:
     setup(cfg, "annotate")
     out_file = os.path.join(cfg.paths.annotated_dir, "unlabeled.jsonl")
-    if is_done(out_file, cfg):
+    stats_file = os.path.join(cfg.paths.annotated_dir, "stats.json")
+    if is_done(out_file, cfg, also=(stats_file,)):
         return
     require(os.path.join(cfg.paths.weak_po_dir, "_SUCCESS"), "main.py stage=train_weak")
 
@@ -52,8 +53,9 @@ def run(cfg: DictConfig) -> None:
             "annotate/c_weak_mean": float(c.mean()),
             "annotate/c_weak_std": float(c.std()),
         }
-        write_json(os.path.join(cfg.paths.annotated_dir, "stats.json"), stats)
+        write_json(stats_file, stats)
         log.info("Annotation stats: %s", stats)
+        hub.push_files(cfg, [out_file, stats_file], f"annotate {cfg.dataset.name} {cfg.model.weak.short}")
         setup_wandb(cfg, run_name(cfg, f"annotate-{cfg.model.weak.short}"), "annotate")
         wandb_log(stats)
         finish_wandb()

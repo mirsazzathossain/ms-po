@@ -13,7 +13,7 @@ from omegaconf import DictConfig
 from utils.evaluation import GoldRewardModel, generate_responses, gold_reward_accuracy
 from models import load_merged, load_tokenizer
 from models.loading import DTYPES
-from utils import dist
+from utils import dist, hub
 from utils.common import is_done, processed_file, require, run_name, setup
 from utils.io import gather_shards, read_jsonl, write_json
 from utils.logging import finish_wandb, log_artifact, log_table, setup_wandb, wandb_log
@@ -29,9 +29,17 @@ def _free(*objs):
         torch.cuda.empty_cache()
 
 
+def _cached(cfg, path: str) -> bool:
+    """Local file, or restored from the Hub artifacts repo."""
+    if not os.path.exists(path) and dist.is_main():
+        hub.restore_file(cfg, path)
+    dist.barrier()
+    return os.path.exists(path)
+
+
 def generations(cfg, model_dir: str, out_file: str, prompts: list[str]) -> list[dict]:
     """Sample (or load cached) responses from `model_dir` for all prompts, sharded over ranks."""
-    if os.path.exists(out_file) and not cfg.overwrite:
+    if not cfg.overwrite and _cached(cfg, out_file):
         return read_jsonl(out_file)
     idx = dist.shard_indices(len(prompts))
     device = dist.device()
@@ -43,6 +51,7 @@ def generations(cfg, model_dir: str, out_file: str, prompts: list[str]) -> list[
     _free(model)
     rows = [{"_idx": i, "prompt": p, "response": r} for i, p, r in zip(idx, local_prompts, responses)]
     gather_shards(out_file, rows)
+    hub.push_files(cfg, [out_file], f"generations {os.path.basename(out_file)}")
     return read_jsonl(out_file)
 
 
@@ -50,7 +59,7 @@ def scores(cfg, gen_file: str, rows: list[dict], rm_holder: dict) -> list[float]
     """Gold-reward scores (cached next to the generations)."""
     kind = cfg.dataset.reward_model
     out_file = gen_file.replace(".jsonl", f".reward_{kind}.jsonl")
-    if os.path.exists(out_file) and not cfg.overwrite:
+    if not cfg.overwrite and _cached(cfg, out_file):
         return [r["reward"] for r in read_jsonl(out_file)]
     if "rm" not in rm_holder:
         rm_holder["rm"] = GoldRewardModel(
@@ -60,6 +69,7 @@ def scores(cfg, gen_file: str, rows: list[dict], rm_holder: dict) -> list[float]
     local = [rows[i] for i in idx]
     vals = rm_holder["rm"].score([r["prompt"] for r in local], [r["response"] for r in local], cfg.eval.reward_batch_size)
     gather_shards(out_file, [{"_idx": i, "reward": v} for i, v in zip(idx, vals)])
+    hub.push_files(cfg, [out_file], f"rewards {os.path.basename(out_file)}")
     return [r["reward"] for r in read_jsonl(out_file)]
 
 
@@ -110,6 +120,7 @@ def run(cfg: DictConfig) -> None:
         }
         write_json(result_file, result)
         log.info("GRA = %.2f%% (%s)", 100 * gra, result)
+        hub.push_files(cfg, [result_file], f"result {cfg.dataset.name} {cfg.model.strong.short} {tag}")
         setup_wandb(cfg, run_name(cfg, f"{cfg.model.strong.short}-{tag}-eval"), "evaluate")
         wandb_log({
             "results/gra": result["gra"],

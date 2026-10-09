@@ -12,7 +12,7 @@ from omegaconf import DictConfig, OmegaConf
 from utils.config import CONFIG_PATH
 
 FAMILIES = ("opt", "qwen2_5", "qwen3")
-DATASETS = ("hh_rlhf", "tldr", "ufb")
+DATASETS = ("hh_helpful", "tldr", "ufb")
 TABLE2_STUDENTS = {
     "opt": ("facebook/opt-1.3b", "facebook/opt-2.7b"),
     "qwen2_5": ("Qwen/Qwen2.5-1.5B", "Qwen/Qwen2.5-3B"),
@@ -70,6 +70,9 @@ def run(cfg: DictConfig) -> None:
         repos |= {m.weak.name, m.strong.name}
     repos |= set(cfg.eval.reward_models.values())
     for repo in sorted(repos):
+        if os.path.isdir(repo):
+            check(f"model {repo}", lambda r=repo: "local directory")
+            continue
         check(f"model {repo}", lambda r=repo: auth_check(r) or "accessible")
     for ds in DATASETS:
         d = _load("dataset", ds)

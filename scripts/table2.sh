@@ -8,7 +8,7 @@ declare -A STRONG=(
 )
 for model in ${MODELS:-opt qwen2_5}; do
   for strong in ${STRONG[$model]}; do
-    for dataset in ${DATASETS:-hh_rlhf tldr ufb}; do
+    for dataset in ${DATASETS:-hh_helpful tldr ufb}; do
       DATASET=${dataset} MODEL=${model} LOSSES=dpo \
         bash "${HERE}/run_pipeline.sh" model.strong.name="${strong}" "$@"
     done

@@ -8,6 +8,7 @@ import json
 import os
 from collections import defaultdict
 
+from utils import hub
 from utils.logging import finish_wandb, log_artifact, log_table, setup_wandb, wandb_log
 
 METHODS = ["human", "ws_po", "cw_po", "ms_po"]
@@ -45,6 +46,7 @@ def _markdown(tables: dict) -> str:
 
 def run(cfg) -> None:
     outputs = cfg.paths.outputs_dir
+    hub.restore_pattern(cfg, "outputs/*/*/results/*.json")
     md_file, csv_file = os.path.join(outputs, "results.md"), os.path.join(outputs, "results.csv")
     rows = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(outputs, "*", "*", "results", "*.json")))]
     if not rows:
@@ -72,5 +74,6 @@ def run(cfg) -> None:
         f"results/gra/{r['dataset']}/{r['weak']}-to-{r['strong']}/{r['loss']}/{r['method']}{r.get('run_suffix', '')}": r["gra"]
         for r in rows
     })
+    hub.push_files(cfg, [csv_file, md_file], "results summary")
     log_artifact("results-summary", "results", [csv_file, md_file], metadata={"n_results": len(rows)})
     finish_wandb()

@@ -1,7 +1,7 @@
-# python main.py stage=train_strong_po dataset=hh_rlhf model=opt method=ms_po loss=dpo
+# python main.py stage=train_strong_po dataset=hh_helpful model=opt method=ms_po loss=dpo
 defaults:
   - paths: default
-  - dataset: hh_rlhf
+  - dataset: hh_helpful     # paper "HH-RLHF" = helpful-base (confirmed by the author)
   - model: opt
   - method: ms_po
   - loss: dpo

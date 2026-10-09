@@ -9,7 +9,7 @@ The code covers every setting in the paper:
 
 - **Methods:** Human, WS-PO, CW-PO, MS-PO
 - **Losses:** DPO, IPO, rDPO, SimPO
-- **Datasets:** HH-RLHF (combined, Helpful, Harmless), TL;DR, UltraFeedback-Binarized
+- **Datasets:** HH-RLHF (`helpful-base`, as confirmed by the author; Harmless and the combination are also available), TL;DR, UltraFeedback-Binarized
 - **Model pairs:** OPT-125M→OPT-{1.3B,2.7B,6.7B}, Qwen2.5-0.5B→Qwen2.5-{1.5B,3B,7B}, Qwen3-0.6B→Qwen3-8B
 - **Metric:** Gold Reward Accuracy (GRA)
 
@@ -22,7 +22,7 @@ ms-po/
 ├── main.py                 # single entry point: python main.py stage=<stage> ...
 ├── configs/                # Hydra configs
 │   ├── config.yaml         #   root: seed, precision, MS-PO (gamma / variant)
-│   ├── dataset/            #   hh_rlhf, hh_helpful, hh_harmless, tldr, ufb
+│   ├── dataset/            #   hh_helpful (= paper "HH-RLHF"), hh_harmless, hh_rlhf (both), tldr, ufb
 │   ├── model/              #   opt, qwen2_5, qwen3 (weak/strong pairs)
 │   ├── method/             #   human, ws_po, cw_po, ms_po
 │   ├── loss/               #   dpo, ipo, rdpo, simpo
@@ -33,7 +33,7 @@ ms-po/
 ├── pipeline/               # one module per stage, each exposing run(cfg)
 ├── utils/                  # confidence scores (losses.py), TRL trainers (trainer.py), evaluation,
 │                           #   W&B (logging.py), HF Hub (hub.py), distributed helpers, io
-├── scripts/                # run_all.sh, run_pipeline.sh, table1-3.sh, ablation.sh, smoke_test.sh, common.sh
+├── scripts/                # run_experiment.sh, run_pipeline.sh, table1-3.sh, run_all.sh, ablation.sh, smoke_test.sh, colab_setup.sh, common.sh
 ├── data/                   # datasets (generated; see data/README.md)
 ├── checkpoints/            # trained weights (generated)
 ├── outputs/                # generations, GRA results, Hydra logs (generated)
@@ -99,7 +99,7 @@ git clone https://github.com/mirsazzathossain/ms-po && cd ms-po
 pip install -r requirements.txt
 bash scripts/smoke_test.sh                                  # plumbing check with tiny models (W&B off)
 bash scripts/smoke_test.sh logger=wandb hub.push=true       # same, also exercising W&B and the Hub
-DATASET=hh_rlhf MODEL=opt LOSSES=dpo bash scripts/run_pipeline.sh
+DATASET=hh_helpful MODEL=opt LOSSES=dpo bash scripts/run_pipeline.sh
 ```
 
 The smoke test builds tiny random GPT-2 models, truncates every split to 48 samples
@@ -109,24 +109,21 @@ methods, DPO), `table1.sh` (TL;DR and UFB loaders, rDPO), `table2.sh`, `table3.s
 GRA numbers are meaningless (usually 0.0, since the samples tie). It takes about 15-20 minutes on
 an A100, mostly dataset preparation and process start-up.
 
-**Google Colab:** Colab ships newer transformers / huggingface_hub than this repo pins, and
-installing the pins globally would break Colab's own packages. Use a venv that reuses Colab's
-torch 2.11 instead. This is the setup the pipeline was tested with on an A100:
+**Google Colab:** Colab ships newer transformers / huggingface_hub than this repo pins, so
+`scripts/colab_setup.sh` builds a venv on top of Colab's torch (the tested setup, A100):
 
 ```bash
-cd /content && git clone https://github.com/mirsazzathossain/ms-po && cd ms-po
-python3 -m venv --without-pip --system-site-packages /content/venv
-curl -sS https://bootstrap.pypa.io/get-pip.py | /content/venv/bin/python -
-/content/venv/bin/pip install -r requirements.txt
-source /content/venv/bin/activate
-export USE_TF=0 TRANSFORMERS_NO_TF=1      # keep Colab's TensorFlow from being imported
-cp .env.example .env                      # fill in WANDB_* and HF_*
-bash scripts/smoke_test.sh logger=wandb hub.push=true
+!git clone https://<github-token>@github.com/mirsazzathossain/ms-po.git /content/ms-po
+!bash /content/ms-po/scripts/colab_setup.sh
+# .env with WANDB_API_KEY, WANDB_ENTITY, HF_TOKEN, HF_USERNAME (e.g. from Colab secrets)
+!source /content/env.sh && METHOD=ms_po LOSS=dpo bash scripts/run_experiment.sh model_dtype=bf16 precision=bf16
 ```
 
-Keep `data/`, `checkpoints/` and `outputs/` on Google Drive (point `MSPO_ROOT` at a Drive folder)
-so a disconnect does not lose finished stages. Finished stages are skipped, so rerunning the same
-command resumes.
+No Drive needed: with `hub.push=true` (default) every stage output goes to private Hugging Face
+repos (models: `<user>/mspo-<checkpoint path>`, data/results: dataset `<user>/mspo-artifacts`),
+and training checkpoints are uploaded to `last-checkpoint/` at every save. After a disconnect, set
+up again and rerun the same command: finished stages are restored from the Hub and training
+resumes from its last checkpoint.
 
 ## Running experiments
 
@@ -135,13 +132,21 @@ command resumes.
 ```bash
 cp .env.example .env               # WANDB_API_KEY, WANDB_ENTITY, HF_TOKEN, HF_USERNAME
 python main.py stage=preflight     # ~2 min; fix any FAIL before spending GPU hours
-NUM_GPUS=8 bash scripts/run_all.sh hub.push=true
+NUM_GPUS=8 bash scripts/run_all.sh
 ```
 
 `run_all.sh` runs preflight, then Table 1, Table 2 and Table 3 (Tables 2-3 reuse Table 1's weak
 teachers, annotations and SFT students), then `collect_results`. `RUN_ABLATION=1` adds the
 Appendix-B variants. Re-run the same command after an interruption; finished stages are skipped.
 Rough cost: ~5,000 A100-hours for everything (Table 1 is ~3,300).
+
+**One experiment** (one table cell, only the stages it needs, resumable):
+
+```bash
+METHOD=ms_po LOSS=dpo bash scripts/run_experiment.sh            # defaults: DATASET=hh_helpful MODEL=opt
+# single 80 GB GPU, faster but same effective batch (32 x 2 = 64):
+PER_DEVICE=32 GRAD_ACCUM=2 GRAD_CKPT=false METHOD=ms_po LOSS=dpo bash scripts/run_experiment.sh model_dtype=bf16 precision=bf16
+```
 
 **Pieces:**
 
@@ -152,13 +157,13 @@ DATASET=ufb MODEL=qwen2_5 LOSSES="dpo ipo rdpo" bash scripts/run_pipeline.sh
 bash scripts/table1.sh      # 3 model pairs × {HH-RLHF, TL;DR, UFB} × {DPO, IPO, rDPO} × 4 methods
 bash scripts/table2.sh      # student-size sweep, DPO
 bash scripts/table3.sh      # SimPO
-DATASET=hh_rlhf MODEL=opt bash scripts/ablation.sh   # App. B variants (+ GAMMAS="0.5 1 2")
+DATASET=hh_helpful MODEL=opt bash scripts/ablation.sh   # App. B variants (+ GAMMAS="0.5 1 2")
 
 # A single stage, with any Hydra override
 python main.py stage=train_strong_po dataset=tldr model=qwen3 method=ms_po loss=ipo ms.gamma=0.5
 ```
 
-Common overrides: `logger=none` turns off W&B, `hub.push=true` uploads weights, `eval.num_samples=500`
+Common overrides: `logger=none` turns off W&B, `hub.push=false` keeps everything local, `eval.num_samples=500`
 evaluates on a subset, and `model_dtype=bf16` loads models in bf16 (the reference code loads fp32)
 to save memory on 7B/8B students.
 
@@ -170,7 +175,7 @@ order afterwards.
 
 ```bash
 NUM_GPUS=4 bash scripts/run_pipeline.sh                     # scripts launch torchrun automatically
-torchrun --nproc_per_node=4 main.py stage=train_strong_po dataset=hh_rlhf model=opt method=ms_po loss=dpo
+torchrun --nproc_per_node=4 main.py stage=train_strong_po dataset=hh_helpful model=opt method=ms_po loss=dpo
 ```
 
 Batch sizes are per device. The effective batch is `per_device × grad_accum × NUM_GPUS`. To keep

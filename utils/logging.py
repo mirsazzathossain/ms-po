@@ -3,6 +3,7 @@ final numbers under `results/*`."""
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 
@@ -58,12 +59,17 @@ def setup_wandb(cfg: DictConfig, run_name: str, job_type: str, group: str | None
     tags = [job_type] + [meta[k] for k in ("dataset", "family", "label_source", "method", "loss", "ms_variant") if k in meta]
     config = to_container(cfg)
     config["run"] = meta
+    group = group or cfg.logger.group
+    # deterministic id: a restarted stage continues its W&B run instead of starting a new one
+    run_id = hashlib.md5(f"{cfg.paths.root_dir}|{group}|{run_name}".encode()).hexdigest()[:16]
     return wandb.init(
         project=cfg.logger.project,
         entity=cfg.logger.entity,
-        group=group or cfg.logger.group,
+        group=group,
         tags=sorted(set(map(str, tags))),
         name=run_name,
+        id=run_id,
+        resume="allow",
         job_type=job_type,
         config=config,
         reinit=True,

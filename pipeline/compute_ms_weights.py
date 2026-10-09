@@ -9,7 +9,7 @@ import torch
 from omegaconf import DictConfig, OmegaConf
 
 from models import check_shared_vocab, load_causal_lm, load_merged, load_tokenizer, score_pairs
-from utils import dist
+from utils import dist, hub
 from utils.common import annotated_file, is_done, require, run_name, setup
 from utils.io import gather_shards, read_jsonl, write_json
 from utils.logging import finish_wandb, setup_wandb, wandb_log
@@ -22,7 +22,8 @@ def run(cfg: DictConfig) -> None:
     OmegaConf.update(cfg, "method.label_source", "weak", force_add=True)
     setup(cfg, "compute_ms_weights")
     out_file = cfg.paths.ms_weights_file
-    if is_done(out_file, cfg):
+    stats_file = out_file.replace(".jsonl", "_stats.json")
+    if is_done(out_file, cfg, also=(stats_file,)):
         return
     sft_dir = cfg.paths.strong_sft_dir
     require(os.path.join(sft_dir, "_SUCCESS"), "main.py stage=train_strong_sft method=ms_po")
@@ -55,8 +56,9 @@ def run(cfg: DictConfig) -> None:
             "ms/c_ms_mean": c_ms.mean().item(),
             "ms/c_ms_frac_negative": (c_ms < 0).float().mean().item(),
         }
-        write_json(out_file.replace(".jsonl", "_stats.json"), stats)
+        write_json(stats_file, stats)
         log.info("MS-PO stats (gamma=%s): %s", cfg.ms.gamma, stats)
+        hub.push_files(cfg, [out_file, stats_file], f"ms weights {cfg.dataset.name} {cfg.model.strong.short}")
         setup_wandb(cfg, run_name(cfg, f"ms-weights-{cfg.model.strong.short}"), "ms_weights")
         wandb_log(stats)
         finish_wandb()

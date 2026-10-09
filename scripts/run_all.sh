@@ -14,7 +14,7 @@ bash "${HERE}/table3.sh" "$@"
 
 if [[ "${RUN_ABLATION:-0}" == "1" ]]; then
   for model in ${MODELS:-opt qwen2_5 qwen3}; do
-    for dataset in ${DATASETS:-hh_rlhf tldr ufb}; do
+    for dataset in ${DATASETS:-hh_helpful tldr ufb}; do
       DATASET=${dataset} MODEL=${model} bash "${HERE}/ablation.sh" "$@"
     done
   done

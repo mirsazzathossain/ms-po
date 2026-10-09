@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # All stages for one dataset / model pair. Re-run to resume.
-#   DATASET=hh_rlhf MODEL=opt bash scripts/run_pipeline.sh [hydra overrides]
+#   DATASET=hh_helpful MODEL=opt bash scripts/run_pipeline.sh [hydra overrides]
 # Options: DATASET, MODEL, LOSSES (dpo ipo rdpo), METHODS (human ws_po cw_po ms_po)
 source "$(dirname "$0")/common.sh"
 
-DATASET=${DATASET:-hh_rlhf}
+DATASET=${DATASET:-hh_helpful}
 MODEL=${MODEL:-opt}
 LOSSES=${LOSSES:-"dpo ipo rdpo"}
 METHODS=${METHODS:-"human ws_po cw_po ms_po"}

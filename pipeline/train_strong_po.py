@@ -11,8 +11,17 @@ from datasets import Dataset
 from omegaconf import DictConfig
 
 from models import copy_adapter, load_merged, load_tokenizer, lora_config, save_lineage
-from utils import dist
-from utils.common import is_done, mark_done, preference_records, require, run_name, setup, validation_set
+from utils import dist, hub
+from utils.common import (
+    is_done,
+    mark_done,
+    preference_records,
+    require,
+    resume_checkpoint,
+    run_name,
+    setup,
+    validation_set,
+)
 from utils.hub import push_folder
 from utils.io import read_jsonl
 from utils.logging import finish_wandb, setup_wandb, wandb_log
@@ -72,6 +81,7 @@ def run(cfg: DictConfig) -> None:
             train_dataset=train_ds,
             eval_dataset=eval_ds,
             processing_class=tok,
+            callbacks=hub.callbacks(cfg, out_dir),
             data_collator=ConfidenceCollator(pad_token_id=tok.pad_token_id),
             peft_config=peft_config,
         )
@@ -82,12 +92,13 @@ def run(cfg: DictConfig) -> None:
             train_dataset=train_ds,
             eval_dataset=eval_ds,
             processing_class=tok,
+            callbacks=hub.callbacks(cfg, out_dir),
             peft_config=peft_config,
         )
     else:
         raise ValueError(f"Unknown loss.trainer '{loss.trainer}'")
 
-    trainer.train()
+    trainer.train(resume_from_checkpoint=resume_checkpoint(cfg, out_dir))
     trainer.save_model(out_dir)
     if dist.is_main():
         tok.save_pretrained(out_dir)
@@ -95,10 +106,6 @@ def run(cfg: DictConfig) -> None:
         save_lineage(out_dir, cfg.model.strong.name, ["sft_adapter", "."])
     dist.barrier()
     mark_done(out_dir)
-    push_folder(
-        cfg, out_dir,
-        f"{cfg.dataset.name}-{cfg.model.strong.short}-{cfg.method.name}-{loss.name}{cfg.method.run_suffix}",
-        f"{cfg.method.name} / {loss.name}",
-    )
+    push_folder(cfg, out_dir, f"{cfg.method.name} / {loss.name}")
     finish_wandb()
     dist.cleanup()

@@ -9,8 +9,8 @@ from omegaconf import DictConfig
 from trl import SFTTrainer
 
 from models import load_causal_lm, load_tokenizer, lora_config, save_lineage
-from utils import dist
-from utils.common import is_done, mark_done, preference_records, run_name, setup, validation_set
+from utils import dist, hub
+from utils.common import is_done, mark_done, preference_records, resume_checkpoint, run_name, setup, validation_set
 from utils.hub import push_folder
 from utils.logging import finish_wandb, setup_wandb
 from utils.trainer import sft_config
@@ -40,19 +40,16 @@ def run(cfg: DictConfig) -> None:
         train_dataset=train_ds,
         eval_dataset=eval_ds,
         processing_class=tok,
+        callbacks=hub.callbacks(cfg, out_dir),
         peft_config=lora_config(st.lora, cfg.model.lora_target_modules),
     )
-    trainer.train()
+    trainer.train(resume_from_checkpoint=resume_checkpoint(cfg, out_dir))
     trainer.save_model(out_dir)
     if dist.is_main():
         tok.save_pretrained(out_dir)
         save_lineage(out_dir, cfg.model.strong.name, ["."])
     dist.barrier()
     mark_done(out_dir)
-    push_folder(
-        cfg, out_dir,
-        f"{cfg.dataset.name}-{cfg.model.strong.short}-sft-{cfg.method.label_source}",
-        f"strong SFT ({cfg.method.label_source} labels)",
-    )
+    push_folder(cfg, out_dir, f"strong SFT ({cfg.method.label_source} labels)")
     finish_wandb()
     dist.cleanup()

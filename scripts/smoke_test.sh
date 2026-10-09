@@ -24,7 +24,7 @@ PY
 TINY="${MSPO_ROOT}/tiny_models"
 SMALL=(
   model.weak.name="${TINY}/weak" model.strong.name="${TINY}/strong" "model.lora_target_modules=[c_attn]"
-  logger=none debug_max_samples=48 infer_batch_size=8
+  logger=none hub.push=false debug_max_samples=48 infer_batch_size=8
   eval.num_samples=8 eval.max_new_tokens=16 eval.generation_batch_size=8 eval.reward_batch_size=8
   dataset.reward_model=deberta eval.reward_models.deberta="${TINY}/reward"
   train.weak_sft.num_train_epochs=1 train.weak_po.num_train_epochs=1

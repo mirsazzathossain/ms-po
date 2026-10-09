@@ -9,8 +9,8 @@ from omegaconf import DictConfig, OmegaConf
 from trl import DPOTrainer, SFTTrainer
 
 from models import load_causal_lm, load_tokenizer
-from utils import dist
-from utils.common import is_done, mark_done, processed_file, run_name, setup, validation_set
+from utils import dist, hub
+from utils.common import is_done, mark_done, processed_file, resume_checkpoint, run_name, setup, validation_set
 from utils.hub import push_folder
 from utils.io import read_jsonl
 from utils.logging import finish_wandb, setup_wandb
@@ -19,13 +19,13 @@ from utils.trainer import dpo_config, sft_config
 log = logging.getLogger("mspo")
 
 
-def _finish(trainer, tokenizer, out_dir, cfg, hub_name, msg):
+def _finish(trainer, tokenizer, out_dir, cfg, msg):
     trainer.save_model(out_dir)
     if dist.is_main():
         tokenizer.save_pretrained(out_dir)
     dist.barrier()
     mark_done(out_dir)
-    push_folder(cfg, out_dir, hub_name, msg)
+    push_folder(cfg, out_dir, msg)
     finish_wandb()
 
 
@@ -45,9 +45,10 @@ def train_sft(cfg, tokenizer, labeled):
         train_dataset=to_sft(labeled),
         eval_dataset=to_sft(validation_set(cfg)),
         processing_class=tokenizer,
+        callbacks=hub.callbacks(cfg, out_dir),
     )
-    trainer.train()
-    _finish(trainer, tokenizer, out_dir, cfg, f"{cfg.dataset.name}-{cfg.model.weak.short}-weak-sft", "weak SFT")
+    trainer.train(resume_from_checkpoint=resume_checkpoint(cfg, out_dir))
+    _finish(trainer, tokenizer, out_dir, cfg, "weak SFT")
 
 
 def train_dpo(cfg, tokenizer, labeled):
@@ -65,9 +66,10 @@ def train_dpo(cfg, tokenizer, labeled):
         train_dataset=labeled,
         eval_dataset=validation_set(cfg),
         processing_class=tokenizer,
+        callbacks=hub.callbacks(cfg, out_dir),
     )
-    trainer.train()
-    _finish(trainer, tokenizer, out_dir, cfg, f"{cfg.dataset.name}-{cfg.model.weak.short}-weak-dpo", "weak DPO")
+    trainer.train(resume_from_checkpoint=resume_checkpoint(cfg, out_dir))
+    _finish(trainer, tokenizer, out_dir, cfg, "weak DPO")
 
 
 def run(cfg: DictConfig) -> None:

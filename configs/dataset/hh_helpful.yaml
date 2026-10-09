@@ -1,4 +1,4 @@
-# Anthropic HH-RLHF, Helpful
+# Anthropic HH-RLHF, helpful-base: the "HH-RLHF" of Tables 1-3 (confirmed by the author)
 name: hh_helpful
 loader: hh_rlhf
 hf_path: Anthropic/hh-rlhf

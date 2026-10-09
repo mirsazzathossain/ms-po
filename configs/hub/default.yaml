@@ -1,4 +1,4 @@
-push: false
+push: true                   # models + data to HF Hub, restored on restart
 user: ${oc.env:HF_USERNAME,null}
 private: true
-prefix: mspo                 # repo: <user>/<prefix>-<dataset>-<model>-<stage>
+prefix: mspo                 # models: <user>/<prefix>-<checkpoint path>; data: <user>/<prefix>-artifacts (dataset)
